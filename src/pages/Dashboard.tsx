@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 import { getCustomers } from "@/lib/crm-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, HardDrive, DollarSign, Activity, AlertTriangle, Wrench, FileText } from "lucide-react";
+import { Users, Server, Shield, DollarSign, Activity, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { StatusBadge } from "@/components/StatusBadge";
 
 export default function Dashboard() {
   const customers = useMemo(() => getCustomers(), []);
@@ -13,9 +12,9 @@ export default function Dashboard() {
     const totalCustomers = customers.length;
     const activeCustomers = customers.filter(c => c.status === 'active').length;
     const totalRevenue = customers.reduce((sum, c) => sum + c.monthlyPayment, 0);
-    const totalAssets = customers.reduce((sum, c) => sum + c.assets.length, 0);
+    const totalServers = customers.reduce((sum, c) => sum + c.servers.length, 0);
+    const totalFirewalls = customers.reduce((sum, c) => sum + c.firewalls.length, 0);
     const totalServices = customers.reduce((sum, c) => sum + c.services.length, 0);
-    const totalDocuments = customers.reduce((sum, c) => sum + c.documents.length, 0);
     const expiringServices = customers.flatMap(c => c.services).filter(s => {
       const end = new Date(s.endDate);
       const now = new Date();
@@ -23,15 +22,15 @@ export default function Dashboard() {
       return diff < 30 && diff > 0;
     }).length;
 
-    return { totalCustomers, activeCustomers, totalRevenue, totalAssets, totalServices, totalDocuments, expiringServices };
+    return { totalCustomers, activeCustomers, totalRevenue, totalServers, totalFirewalls, totalServices, expiringServices };
   }, [customers]);
 
   const cards = [
-    { title: 'סה"כ לקוחות', value: stats.totalCustomers, icon: Users, accent: "text-primary" },
+    { title: "סה\"כ לקוחות", value: stats.totalCustomers, icon: Users, accent: "text-primary" },
     { title: "לקוחות פעילים", value: stats.activeCustomers, icon: Activity, accent: "text-success" },
     { title: "הכנסה חודשית", value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, accent: "text-primary" },
-    { title: "נכסים מנוהלים", value: stats.totalAssets, icon: HardDrive, accent: "text-primary" },
-    { title: "שירותים פעילים", value: stats.totalServices, icon: Wrench, accent: "text-primary" },
+    { title: "שרתים מנוהלים", value: stats.totalServers, icon: Server, accent: "text-primary" },
+    { title: "פיירוולים", value: stats.totalFirewalls, icon: Shield, accent: "text-primary" },
     { title: "שירותים שפגים בקרוב", value: stats.expiringServices, icon: AlertTriangle, accent: "text-warning" },
   ];
 
@@ -62,33 +61,27 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {customers.slice(0, 5).map((customer) => {
-              const primary = customer.contacts.find(c => c.isPrimary) || customer.contacts[0];
-              return (
-                <div
-                  key={customer.id}
-                  onClick={() => navigate(`/customers/${customer.id}`)}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Users className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground">{customer.name}</p>
-                        <StatusBadge status={customer.status} />
-                      </div>
-                      <p className="text-xs text-muted-foreground">{primary?.name || 'ללא איש קשר'}</p>
-                    </div>
+            {customers.slice(0, 5).map((customer) => (
+              <div
+                key={customer.id}
+                onClick={() => navigate(`/customers/${customer.id}`)}
+                className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-primary">₪{customer.monthlyPayment.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{customer.services.length} שירותים • {customer.assets.length} נכסים</p>
+                  <div>
+                    <p className="font-medium text-foreground">{customer.name}</p>
+                    <p className="text-xs text-muted-foreground">{customer.contactName}</p>
                   </div>
                 </div>
-              );
-            })}
+                <div className="text-left">
+                  <p className="text-sm font-medium text-foreground">₪{customer.monthlyPayment.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{customer.services.length} שירותים</p>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
