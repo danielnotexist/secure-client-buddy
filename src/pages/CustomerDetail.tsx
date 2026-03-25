@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  getCustomerById, updateCustomer, addServiceToCustomer, addServerToCustomer, addFirewallToCustomer,
-  removeServiceFromCustomer, removeServerFromCustomer, removeFirewallFromCustomer,
-  getServiceTypeLabel, type Customer, type Service, type Server, type Firewall
+  getCustomerById, updateCustomer,
+  addContactToCustomer, addServiceToCustomer, addAssetToCustomer, addDocumentToCustomer,
+  removeContactFromCustomer, removeServiceFromCustomer, removeAssetFromCustomer, removeDocumentFromCustomer,
+  getServiceTypeLabel, getStatusLabel, SERVICE_TYPES, ASSET_CATEGORIES, DOCUMENT_CATEGORIES, INDUSTRIES,
+  type Customer, type Service, type Asset, type Contact, type CustomerDocument,
 } from "@/lib/crm-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,17 +16,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Plus, Trash2, Server as ServerIcon, Shield, Wrench, User } from "lucide-react";
-import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import {
+  ArrowRight, Plus, Trash2, User, Wrench, HardDrive, FileText, Phone, Mail,
+  Globe, MapPin, Building2, Calendar, CreditCard, Users, Star, Download, Eye,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [serviceDialog, setServiceDialog] = useState(false);
-  const [serverDialog, setServerDialog] = useState(false);
-  const [firewallDialog, setFirewallDialog] = useState(false);
+  const [assetDialog, setAssetDialog] = useState(false);
+  const [contactDialog, setContactDialog] = useState(false);
+  const [documentDialog, setDocumentDialog] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -37,6 +46,24 @@ export default function CustomerDetail() {
   if (!customer) return null;
 
   const refresh = () => setCustomer(getCustomerById(customer.id) || customer);
+  const primaryContact = customer.contacts.find(c => c.isPrimary) || customer.contacts[0];
+
+  // ===== Handlers =====
+
+  const handleAddContact = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    addContactToCustomer(customer.id, {
+      name: fd.get("name") as string,
+      role: fd.get("role") as string,
+      email: fd.get("email") as string,
+      phone: fd.get("phone") as string,
+      isPrimary: customer.contacts.length === 0,
+    });
+    refresh();
+    setContactDialog(false);
+    toast.success("איש קשר נוסף");
+  };
 
   const handleAddService = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,6 +72,8 @@ export default function CustomerDetail() {
       name: fd.get("name") as string,
       type: fd.get("type") as Service["type"],
       status: fd.get("status") as Service["status"],
+      vendor: fd.get("vendor") as string,
+      licenseCount: Number(fd.get("licenseCount") || 0),
       startDate: fd.get("startDate") as string,
       endDate: fd.get("endDate") as string,
       price: Number(fd.get("price")),
@@ -55,108 +84,167 @@ export default function CustomerDetail() {
     toast.success("שירות נוסף");
   };
 
-  const handleAddServer = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddAsset = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    addServerToCustomer(customer.id, {
+    addAssetToCustomer(customer.id, {
       name: fd.get("name") as string,
-      ip: fd.get("ip") as string,
-      os: fd.get("os") as string,
-      type: fd.get("type") as Server["type"],
-      status: fd.get("status") as Server["status"],
-      backupEnabled: fd.get("backupEnabled") === "on",
-      notes: fd.get("notes") as string,
-    });
-    refresh();
-    setServerDialog(false);
-    toast.success("שרת נוסף");
-  };
-
-  const handleAddFirewall = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    addFirewallToCustomer(customer.id, {
-      name: fd.get("name") as string,
+      category: fd.get("category") as string,
       model: fd.get("model") as string,
+      manufacturer: fd.get("manufacturer") as string,
+      serialNumber: fd.get("serialNumber") as string,
       ip: fd.get("ip") as string,
       location: fd.get("location") as string,
-      status: fd.get("status") as Firewall["status"],
-      lastUpdate: fd.get("lastUpdate") as string,
+      status: fd.get("status") as Asset["status"],
+      purchaseDate: fd.get("purchaseDate") as string,
+      warrantyEnd: fd.get("warrantyEnd") as string,
+      notes: fd.get("notes") as string,
+      properties: {},
+    });
+    refresh();
+    setAssetDialog(false);
+    toast.success("נכס נוסף");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        addDocumentToCustomer(customer.id, {
+          name: file.name,
+          type: file.type,
+          dataUrl: reader.result as string,
+          uploadedAt: new Date().toISOString().split('T')[0],
+          category: file.type.startsWith('image/') ? 'photo' : 'other',
+          notes: '',
+        });
+        refresh();
+        toast.success(`הקובץ "${file.name}" הועלה`);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleSaveInfo = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    updateCustomer(customer.id, {
+      name: fd.get("name") as string,
+      industry: fd.get("industry") as string,
+      website: fd.get("website") as string,
+      address: fd.get("address") as string,
+      city: fd.get("city") as string,
+      status: fd.get("status") as Customer["status"],
+      monthlyPayment: Number(fd.get("monthlyPayment")),
+      contractStart: fd.get("contractStart") as string,
+      contractEnd: fd.get("contractEnd") as string,
       notes: fd.get("notes") as string,
     });
     refresh();
-    setFirewallDialog(false);
-    toast.success("פיירוול נוסף");
+    setEditMode(false);
+    toast.success("פרטים עודכנו");
   };
+
+  const totalServicesCost = customer.services.reduce((s, srv) => s + srv.price, 0);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/customers")}>
           <ArrowRight className="h-5 w-5" />
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{customer.name}</h1>
-          <p className="text-sm text-muted-foreground">{customer.contactName} • {customer.email} • {customer.phone}</p>
-        </div>
-        <div className="mr-auto">
-          <StatusBadge status={customer.status} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold text-foreground">{customer.name}</h1>
+            <StatusBadge status={customer.status} />
+            {customer.industry && (
+              <Badge variant="secondary" className="text-xs">{customer.industry}</Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
+            {primaryContact && (
+              <>
+                <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{primaryContact.name}</span>
+                <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" /><span dir="ltr">{primaryContact.phone}</span></span>
+                <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /><span dir="ltr">{primaryContact.email}</span></span>
+              </>
+            )}
+            {customer.city && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{customer.city}</span>}
+            {customer.website && <a href={customer.website} target="_blank" className="flex items-center gap-1 text-primary hover:underline"><Globe className="h-3.5 w-3.5" /><span dir="ltr">{customer.website.replace('https://', '')}</span></a>}
+          </div>
         </div>
       </div>
 
-      {/* Info cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card className="bg-card border-border">
           <CardContent className="p-4 text-center">
             <p className="text-xs text-muted-foreground">תשלום חודשי</p>
-            <p className="text-2xl font-bold text-primary mt-1">₪{customer.monthlyPayment.toLocaleString()}</p>
+            <p className="text-xl font-bold text-primary mt-1">₪{customer.monthlyPayment.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4 text-center">
             <p className="text-xs text-muted-foreground">שירותים</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{customer.services.length}</p>
+            <p className="text-xl font-bold text-foreground mt-1">{customer.services.length}</p>
+            <p className="text-xs text-muted-foreground">₪{totalServicesCost.toLocaleString()}/חודש</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">שרתים</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{customer.servers.length}</p>
+            <p className="text-xs text-muted-foreground">נכסים</p>
+            <p className="text-xl font-bold text-foreground mt-1">{customer.assets.length}</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">פיירוולים</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{customer.firewalls.length}</p>
+            <p className="text-xs text-muted-foreground">אנשי קשר</p>
+            <p className="text-xl font-bold text-foreground mt-1">{customer.contacts.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">מסמכים</p>
+            <p className="text-xl font-bold text-foreground mt-1">{customer.documents.length}</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Tabs */}
       <Tabs defaultValue="services" className="w-full">
-        <TabsList className="w-full justify-start bg-muted/30">
-          <TabsTrigger value="services" className="gap-2"><Wrench className="h-4 w-4" />שירותים</TabsTrigger>
-          <TabsTrigger value="servers" className="gap-2"><ServerIcon className="h-4 w-4" />שרתים</TabsTrigger>
-          <TabsTrigger value="firewalls" className="gap-2"><Shield className="h-4 w-4" />פיירוולים</TabsTrigger>
-          <TabsTrigger value="info" className="gap-2"><User className="h-4 w-4" />פרטים</TabsTrigger>
+        <TabsList className="w-full justify-start bg-muted/30 flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="services" className="gap-1.5"><Wrench className="h-4 w-4" />שירותים</TabsTrigger>
+          <TabsTrigger value="assets" className="gap-1.5"><HardDrive className="h-4 w-4" />נכסים</TabsTrigger>
+          <TabsTrigger value="contacts" className="gap-1.5"><Users className="h-4 w-4" />אנשי קשר</TabsTrigger>
+          <TabsTrigger value="documents" className="gap-1.5"><FileText className="h-4 w-4" />מסמכים</TabsTrigger>
+          <TabsTrigger value="info" className="gap-1.5"><Building2 className="h-4 w-4" />פרטי חברה</TabsTrigger>
         </TabsList>
 
-        {/* Services Tab */}
+        {/* ===== SERVICES TAB ===== */}
         <TabsContent value="services" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-foreground">שירותים ({customer.services.length})</h3>
             <Dialog open={serviceDialog} onOpenChange={setServiceDialog}>
               <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" />הוסף שירות</Button></DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg">
                 <DialogHeader><DialogTitle>הוספת שירות</DialogTitle></DialogHeader>
                 <form onSubmit={handleAddService} className="space-y-3">
-                  <div className="space-y-1"><Label>שם השירות</Label><Input name="name" required /></div>
                   <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><Label>שם השירות</Label><Input name="name" required /></div>
+                    <div className="space-y-1">
+                      <Label>ספק</Label><Input name="vendor" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <Label>סוג</Label>
                       <Select name="type" defaultValue="backup">
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {(['backup','dr','email-security','edr','mdr','dlp','rmm','firewall','other'] as const).map(t => (
+                          {SERVICE_TYPES.map(t => (
                             <SelectItem key={t} value={t}>{getServiceTypeLabel(t)}</SelectItem>
                           ))}
                         </SelectContent>
@@ -173,6 +261,7 @@ export default function CustomerDetail() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1"><Label>רישיונות</Label><Input name="licenseCount" type="number" dir="ltr" defaultValue={0} /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1"><Label>תאריך התחלה</Label><Input name="startDate" type="date" dir="ltr" required /></div>
@@ -186,20 +275,31 @@ export default function CustomerDetail() {
             </Dialog>
           </div>
           {customer.services.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">אין שירותים</div>
+            <div className="text-center py-12 text-muted-foreground">
+              <Wrench className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>אין שירותים. לחץ על "הוסף שירות" להתחיל.</p>
+            </div>
           ) : (
             <div className="grid gap-3">
               {customer.services.map(s => (
-                <Card key={s.id} className="bg-muted/20 border-border">
-                  <CardContent className="p-4 flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <p className="font-medium text-foreground">{s.name}</p>
-                      <p className="text-xs text-muted-foreground">{getServiceTypeLabel(s.type)} • ₪{s.price}/חודש</p>
-                      <p className="text-xs text-muted-foreground mt-1">{s.startDate} → {s.endDate}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={s.status} />
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { removeServiceFromCustomer(customer.id, s.id); refresh(); toast.success("שירות הוסר"); }}>
+                <Card key={s.id} className="bg-card border-border hover:border-glow transition-all">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-foreground">{s.name}</p>
+                          <StatusBadge status={s.status} />
+                          <Badge variant="outline" className="text-xs">{getServiceTypeLabel(s.type)}</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 mt-2 text-sm text-muted-foreground">
+                          {s.vendor && <span>ספק: <strong className="text-foreground">{s.vendor}</strong></span>}
+                          <span>מחיר: <strong className="text-primary">₪{s.price}/חודש</strong></span>
+                          {s.licenseCount > 0 && <span>רישיונות: <strong className="text-foreground">{s.licenseCount}</strong></span>}
+                          <span>{s.startDate} → {s.endDate}</span>
+                        </div>
+                        {s.notes && <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded">{s.notes}</p>}
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => { removeServiceFromCustomer(customer.id, s.id); refresh(); toast.success("שירות הוסר"); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -210,32 +310,37 @@ export default function CustomerDetail() {
           )}
         </TabsContent>
 
-        {/* Servers Tab */}
-        <TabsContent value="servers" className="space-y-4">
+        {/* ===== ASSETS TAB ===== */}
+        <TabsContent value="assets" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-foreground">שרתים ({customer.servers.length})</h3>
-            <Dialog open={serverDialog} onOpenChange={setServerDialog}>
-              <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" />הוסף שרת</Button></DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>הוספת שרת</DialogTitle></DialogHeader>
-                <form onSubmit={handleAddServer} className="space-y-3">
-                  <div className="space-y-1"><Label>שם השרת</Label><Input name="name" required /></div>
+            <h3 className="font-semibold text-foreground">נכסים ({customer.assets.length})</h3>
+            <Dialog open={assetDialog} onOpenChange={setAssetDialog}>
+              <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" />הוסף נכס</Button></DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>הוספת נכס</DialogTitle></DialogHeader>
+                <form onSubmit={handleAddAsset} className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label>כתובת IP</Label><Input name="ip" dir="ltr" required /></div>
-                    <div className="space-y-1"><Label>מערכת הפעלה</Label><Input name="os" /></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><Label>שם</Label><Input name="name" required /></div>
                     <div className="space-y-1">
-                      <Label>סוג</Label>
-                      <Select name="type" defaultValue="virtual">
+                      <Label>קטגוריה</Label>
+                      <Select name="category" defaultValue="שרת">
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="physical">פיזי</SelectItem>
-                          <SelectItem value="virtual">וירטואלי</SelectItem>
-                          <SelectItem value="cloud">ענן</SelectItem>
+                          {ASSET_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><Label>יצרן</Label><Input name="manufacturer" /></div>
+                    <div className="space-y-1"><Label>דגם</Label><Input name="model" /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><Label>מספר סריאלי</Label><Input name="serialNumber" dir="ltr" /></div>
+                    <div className="space-y-1"><Label>כתובת IP</Label><Input name="ip" dir="ltr" /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><Label>מיקום</Label><Input name="location" /></div>
                     <div className="space-y-1">
                       <Label>סטטוס</Label>
                       <Select name="status" defaultValue="online">
@@ -244,13 +349,15 @@ export default function CustomerDetail() {
                           <SelectItem value="online">מחובר</SelectItem>
                           <SelectItem value="offline">מנותק</SelectItem>
                           <SelectItem value="maintenance">תחזוקה</SelectItem>
+                          <SelectItem value="needs-update">דרוש עדכון</SelectItem>
+                          <SelectItem value="retired">פורק</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch name="backupEnabled" id="backupEnabled" />
-                    <Label htmlFor="backupEnabled">גיבוי מופעל</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><Label>תאריך רכישה</Label><Input name="purchaseDate" type="date" dir="ltr" /></div>
+                    <div className="space-y-1"><Label>סוף אחריות</Label><Input name="warrantyEnd" type="date" dir="ltr" /></div>
                   </div>
                   <div className="space-y-1"><Label>הערות</Label><Textarea name="notes" /></div>
                   <Button type="submit" className="w-full">הוסף</Button>
@@ -258,21 +365,42 @@ export default function CustomerDetail() {
               </DialogContent>
             </Dialog>
           </div>
-          {customer.servers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">אין שרתים</div>
+          {customer.assets.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <HardDrive className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>אין נכסים. לחץ על "הוסף נכס" להתחיל.</p>
+            </div>
           ) : (
             <div className="grid gap-3">
-              {customer.servers.map(s => (
-                <Card key={s.id} className="bg-muted/20 border-border">
-                  <CardContent className="p-4 flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <p className="font-medium text-foreground">{s.name}</p>
-                      <p className="text-xs text-muted-foreground" dir="ltr">{s.ip} • {s.os} • {s.type === 'physical' ? 'פיזי' : s.type === 'virtual' ? 'וירטואלי' : 'ענן'}</p>
-                      {s.backupEnabled && <p className="text-xs text-success mt-1">✓ גיבוי מופעל</p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={s.status} />
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { removeServerFromCustomer(customer.id, s.id); refresh(); toast.success("שרת הוסר"); }}>
+              {customer.assets.map(a => (
+                <Card key={a.id} className="bg-card border-border hover:border-glow transition-all">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-foreground">{a.name}</p>
+                          <StatusBadge status={a.status} />
+                          <Badge variant="secondary" className="text-xs">{a.category}</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 mt-2 text-sm text-muted-foreground">
+                          {a.manufacturer && <span>יצרן: <strong className="text-foreground">{a.manufacturer}</strong></span>}
+                          {a.model && <span>דגם: <strong className="text-foreground">{a.model}</strong></span>}
+                          {a.ip && <span>IP: <strong className="text-foreground" dir="ltr">{a.ip}</strong></span>}
+                          {a.location && <span>מיקום: <strong className="text-foreground">{a.location}</strong></span>}
+                          {a.serialNumber && <span>סריאלי: <strong className="text-foreground" dir="ltr">{a.serialNumber}</strong></span>}
+                          {a.purchaseDate && <span>רכישה: <strong className="text-foreground">{a.purchaseDate}</strong></span>}
+                          {a.warrantyEnd && <span>אחריות עד: <strong className="text-foreground">{a.warrantyEnd}</strong></span>}
+                        </div>
+                        {Object.keys(a.properties).length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {Object.entries(a.properties).map(([k, v]) => (
+                              <Badge key={k} variant="outline" className="text-xs">{k}: {v}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {a.notes && <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded">{a.notes}</p>}
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => { removeAssetFromCustomer(customer.id, a.id); refresh(); toast.success("נכס הוסר"); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -283,85 +411,211 @@ export default function CustomerDetail() {
           )}
         </TabsContent>
 
-        {/* Firewalls Tab */}
-        <TabsContent value="firewalls" className="space-y-4">
+        {/* ===== CONTACTS TAB ===== */}
+        <TabsContent value="contacts" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-foreground">פיירוולים ({customer.firewalls.length})</h3>
-            <Dialog open={firewallDialog} onOpenChange={setFirewallDialog}>
-              <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" />הוסף פיירוול</Button></DialogTrigger>
+            <h3 className="font-semibold text-foreground">אנשי קשר ({customer.contacts.length})</h3>
+            <Dialog open={contactDialog} onOpenChange={setContactDialog}>
+              <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" />הוסף איש קשר</Button></DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>הוספת פיירוול</DialogTitle></DialogHeader>
-                <form onSubmit={handleAddFirewall} className="space-y-3">
-                  <div className="space-y-1"><Label>שם</Label><Input name="name" required /></div>
+                <DialogHeader><DialogTitle>הוספת איש קשר</DialogTitle></DialogHeader>
+                <form onSubmit={handleAddContact} className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label>דגם</Label><Input name="model" required /></div>
-                    <div className="space-y-1"><Label>כתובת IP</Label><Input name="ip" dir="ltr" /></div>
+                    <div className="space-y-1"><Label>שם</Label><Input name="name" required /></div>
+                    <div className="space-y-1"><Label>תפקיד</Label><Input name="role" /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label>מיקום</Label><Input name="location" /></div>
+                    <div className="space-y-1"><Label>אימייל</Label><Input name="email" type="email" dir="ltr" /></div>
+                    <div className="space-y-1"><Label>טלפון</Label><Input name="phone" dir="ltr" /></div>
+                  </div>
+                  <Button type="submit" className="w-full">הוסף</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+          {customer.contacts.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>אין אנשי קשר.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {customer.contacts.map(c => (
+                <Card key={c.id} className="bg-card border-border hover:border-glow transition-all">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground flex items-center gap-1">
+                              {c.name}
+                              {c.isPrimary && <Star className="h-3.5 w-3.5 text-warning fill-warning" />}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{c.role}</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                          {c.email && <p className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /><span dir="ltr">{c.email}</span></p>}
+                          {c.phone && <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /><span dir="ltr">{c.phone}</span></p>}
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { removeContactFromCustomer(customer.id, c.id); refresh(); toast.success("איש קשר הוסר"); }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ===== DOCUMENTS TAB ===== */}
+        <TabsContent value="documents" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-foreground">מסמכים ותמונות ({customer.documents.length})</h3>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <Button size="sm" className="gap-1" onClick={() => fileInputRef.current?.click()}>
+                <Plus className="h-4 w-4" />העלה קובץ
+              </Button>
+            </div>
+          </div>
+          {customer.documents.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>אין מסמכים. לחץ על "העלה קובץ" להתחיל.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {customer.documents.map(doc => (
+                <Card key={doc.id} className="bg-card border-border hover:border-glow transition-all overflow-hidden">
+                  <CardContent className="p-0">
+                    {doc.type.startsWith('image/') ? (
+                      <div className="h-40 bg-muted/30 overflow-hidden">
+                        <img src={doc.dataUrl} alt={doc.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="h-40 bg-muted/20 flex items-center justify-center">
+                        <FileText className="h-16 w-16 text-muted-foreground/30" />
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <p className="font-medium text-foreground text-sm truncate">{doc.name}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-muted-foreground">{doc.uploadedAt}</span>
+                        <div className="flex gap-1">
+                          <a href={doc.dataUrl} download={doc.name}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7"><Download className="h-3.5 w-3.5" /></Button>
+                          </a>
+                          {doc.type.startsWith('image/') && (
+                            <a href={doc.dataUrl} target="_blank">
+                              <Button variant="ghost" size="icon" className="h-7 w-7"><Eye className="h-3.5 w-3.5" /></Button>
+                            </a>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { removeDocumentFromCustomer(customer.id, doc.id); refresh(); toast.success("מסמך הוסר"); }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ===== INFO TAB ===== */}
+        <TabsContent value="info">
+          <Card className="bg-card border-border">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">פרטי החברה</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
+                {editMode ? 'ביטול' : 'עריכה'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {editMode ? (
+                <form onSubmit={handleSaveInfo} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1"><Label>שם החברה</Label><Input name="name" defaultValue={customer.name} required /></div>
+                    <div className="space-y-1">
+                      <Label>תחום</Label>
+                      <Select name="industry" defaultValue={customer.industry}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1"><Label>אתר אינטרנט</Label><Input name="website" defaultValue={customer.website} dir="ltr" /></div>
                     <div className="space-y-1">
                       <Label>סטטוס</Label>
-                      <Select name="status" defaultValue="active">
+                      <Select name="status" defaultValue={customer.status}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="active">פעיל</SelectItem>
                           <SelectItem value="inactive">לא פעיל</SelectItem>
-                          <SelectItem value="needs-update">דרוש עדכון</SelectItem>
+                          <SelectItem value="trial">ניסיון</SelectItem>
+                          <SelectItem value="prospect">פוטנציאלי</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1"><Label>כתובת</Label><Input name="address" defaultValue={customer.address} /></div>
+                    <div className="space-y-1"><Label>עיר</Label><Input name="city" defaultValue={customer.city} /></div>
+                    <div className="space-y-1"><Label>תשלום חודשי (₪)</Label><Input name="monthlyPayment" type="number" defaultValue={customer.monthlyPayment} dir="ltr" /></div>
+                    <div className="space-y-1"><Label>תחילת חוזה</Label><Input name="contractStart" type="date" defaultValue={customer.contractStart} dir="ltr" /></div>
+                    <div className="space-y-1"><Label>סיום חוזה</Label><Input name="contractEnd" type="date" defaultValue={customer.contractEnd} dir="ltr" /></div>
                   </div>
-                  <div className="space-y-1"><Label>עדכון אחרון</Label><Input name="lastUpdate" type="date" dir="ltr" /></div>
-                  <div className="space-y-1"><Label>הערות</Label><Textarea name="notes" /></div>
-                  <Button type="submit" className="w-full">הוסף</Button>
+                  <div className="space-y-1"><Label>הערות</Label><Textarea name="notes" defaultValue={customer.notes} rows={4} /></div>
+                  <Button type="submit">שמור שינויים</Button>
                 </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-          {customer.firewalls.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">אין פיירוולים</div>
-          ) : (
-            <div className="grid gap-3">
-              {customer.firewalls.map(f => (
-                <Card key={f.id} className="bg-muted/20 border-border">
-                  <CardContent className="p-4 flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <p className="font-medium text-foreground">{f.name}</p>
-                      <p className="text-xs text-muted-foreground">{f.model} • {f.ip} • {f.location}</p>
-                      <p className="text-xs text-muted-foreground mt-1">עדכון אחרון: {f.lastUpdate}</p>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8">
+                    <InfoField icon={<Building2 className="h-4 w-4" />} label="שם החברה" value={customer.name} />
+                    <InfoField icon={<Building2 className="h-4 w-4" />} label="תחום" value={customer.industry} />
+                    <InfoField icon={<Globe className="h-4 w-4" />} label="אתר" value={customer.website} dir="ltr" />
+                    <InfoField icon={<MapPin className="h-4 w-4" />} label="כתובת" value={`${customer.address}${customer.city ? `, ${customer.city}` : ''}`} />
+                    <InfoField icon={<CreditCard className="h-4 w-4" />} label="תשלום חודשי" value={`₪${customer.monthlyPayment.toLocaleString()}`} highlight />
+                    <InfoField icon={<Calendar className="h-4 w-4" />} label="תקופת חוזה" value={customer.contractStart && customer.contractEnd ? `${customer.contractStart} → ${customer.contractEnd}` : 'לא הוגדר'} />
+                    <InfoField icon={<Calendar className="h-4 w-4" />} label="תאריך הצטרפות" value={customer.createdAt} />
+                  </div>
+                  {customer.notes && (
+                    <div className="border-t border-border pt-4">
+                      <Label className="text-muted-foreground text-xs">הערות</Label>
+                      <p className="text-foreground mt-1 whitespace-pre-wrap bg-muted/20 p-3 rounded-lg">{customer.notes}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={f.status} />
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { removeFirewallFromCustomer(customer.id, f.id); refresh(); toast.success("פיירוול הוסר"); }}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Info Tab */}
-        <TabsContent value="info">
-          <Card className="bg-card border-border">
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label className="text-muted-foreground">שם החברה</Label><p className="font-medium text-foreground">{customer.name}</p></div>
-                <div><Label className="text-muted-foreground">איש קשר</Label><p className="font-medium text-foreground">{customer.contactName}</p></div>
-                <div><Label className="text-muted-foreground">אימייל</Label><p className="font-medium text-foreground" dir="ltr">{customer.email}</p></div>
-                <div><Label className="text-muted-foreground">טלפון</Label><p className="font-medium text-foreground" dir="ltr">{customer.phone}</p></div>
-                <div><Label className="text-muted-foreground">תאריך הצטרפות</Label><p className="font-medium text-foreground">{customer.createdAt}</p></div>
-                <div><Label className="text-muted-foreground">תשלום חודשי</Label><p className="font-medium text-primary">₪{customer.monthlyPayment.toLocaleString()}</p></div>
-              </div>
-              {customer.notes && (
-                <div><Label className="text-muted-foreground">הערות</Label><p className="text-foreground mt-1">{customer.notes}</p></div>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function InfoField({ icon, label, value, dir, highlight }: { icon: React.ReactNode; label: string; value: string; dir?: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-muted-foreground mt-0.5">{icon}</span>
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className={`font-medium ${highlight ? 'text-primary' : 'text-foreground'}`} dir={dir}>{value || '—'}</p>
+      </div>
     </div>
   );
 }
