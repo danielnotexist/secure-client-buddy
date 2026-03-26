@@ -292,7 +292,7 @@ export function getCustomerById(id: string): Customer | undefined {
   return getCustomers().find(c => c.id === id);
 }
 
-export function addCustomer(customer: Omit<Customer, 'id' | 'createdAt' | 'contacts' | 'services' | 'assets' | 'documents'>): Customer {
+export function addCustomer(customer: Omit<Customer, 'id' | 'createdAt' | 'contacts' | 'services' | 'assets' | 'documents' | 'tickets'>): Customer {
   const customers = getCustomers();
   const newCustomer: Customer = {
     ...customer,
@@ -302,6 +302,7 @@ export function addCustomer(customer: Omit<Customer, 'id' | 'createdAt' | 'conta
     services: [],
     assets: [],
     documents: [],
+    tickets: [],
   };
   customers.push(newCustomer);
   saveCustomers(customers);
