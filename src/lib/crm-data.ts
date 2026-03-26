@@ -198,6 +198,11 @@ const DEMO_CUSTOMERS: Customer[] = [
       { id: generateId(), name: 'SW-Core', category: 'סוויצ\'', model: 'Cisco Catalyst 9300', manufacturer: 'Cisco', serialNumber: 'CS-001', ip: '192.168.1.1', location: 'Rack A', status: 'online', purchaseDate: '2023-06-15', warrantyEnd: '2026-06-15', notes: 'Core switch 48 ports', properties: { ports: '48', poe: 'כן' } },
     ],
     documents: [],
+    avatarUrl: '',
+    tickets: [
+      { id: generateId(), subject: 'תקלה במדפסת קומה 3', description: 'המדפסת לא מדפיסה בצבע', status: 'open', priority: 'medium', assignee: '', createdAt: '2025-03-20', updatedAt: '2025-03-20', imageUrl: '', notes: '' },
+      { id: generateId(), subject: 'חיבור VPN לא עובד', description: 'עובד מרחוק לא מצליח להתחבר', status: 'in-progress', priority: 'high', assignee: '', createdAt: '2025-03-18', updatedAt: '2025-03-22', imageUrl: '', notes: 'בדקנו - צריך לחדש certificate' },
+    ],
   },
   {
     id: generateId(),
