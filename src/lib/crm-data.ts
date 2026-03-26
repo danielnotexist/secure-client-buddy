@@ -41,10 +41,23 @@ export interface Asset {
 export interface CustomerDocument {
   id: string;
   name: string;
-  type: string; // mime or category
-  dataUrl: string; // base64 data URL for localStorage
+  type: string;
+  dataUrl: string;
   uploadedAt: string;
   category: 'contract' | 'invoice' | 'diagram' | 'photo' | 'report' | 'other';
+  notes: string;
+}
+
+export interface Ticket {
+  id: string;
+  subject: string;
+  description: string;
+  status: 'open' | 'in-progress' | 'waiting' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  assignee: string;
+  createdAt: string;
+  updatedAt: string;
+  imageUrl: string;
   notes: string;
 }
 
