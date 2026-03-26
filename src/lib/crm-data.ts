@@ -254,6 +254,8 @@ const DEMO_CUSTOMERS: Customer[] = [
     services: [],
     assets: [],
     documents: [],
+    avatarUrl: '',
+    tickets: [],
   },
 ];
 
