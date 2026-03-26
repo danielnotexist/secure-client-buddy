@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { getCustomers } from "@/lib/crm-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, HardDrive, DollarSign, Activity, AlertTriangle, Wrench, FileText } from "lucide-react";
+import { Users, HardDrive, DollarSign, Activity, AlertTriangle, Wrench, TicketCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "@/components/StatusBadge";
 
