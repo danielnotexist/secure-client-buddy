@@ -216,12 +216,25 @@ const DEMO_CUSTOMERS: Customer[] = [
 // ===== CRUD Operations =====
 
 export function getCustomers(): Customer[] {
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_CUSTOMERS));
+      return DEMO_CUSTOMERS;
+    }
+    const parsed = JSON.parse(data);
+    // Validate that data matches new schema - check first item has required fields
+    if (Array.isArray(parsed) && parsed.length > 0 && (!parsed[0].contacts || !parsed[0].assets || !parsed[0].documents)) {
+      // Old schema data - reset to demo
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_CUSTOMERS));
+      return DEMO_CUSTOMERS;
+    }
+    return parsed;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_CUSTOMERS));
     return DEMO_CUSTOMERS;
   }
-  return JSON.parse(data);
 }
 
 export function saveCustomers(customers: Customer[]) {
