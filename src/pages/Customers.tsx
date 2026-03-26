@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
-import { getCustomers, addCustomer, deleteCustomer, type Customer } from "@/lib/crm-data";
+import { useState, useMemo, useRef } from "react";
+import { getCustomers, addCustomer, deleteCustomer, updateCustomer, type Customer } from "@/lib/crm-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Search, Trash2, Eye, Building2, MapPin } from "lucide-react";
+import { Plus, Search, Trash2, Eye, MapPin, TicketCheck, ImagePlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { INDUSTRIES } from "@/lib/crm-data";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>(() => getCustomers());
@@ -49,6 +50,7 @@ export default function Customers() {
       contractStart: fd.get("contractStart") as string,
       contractEnd: fd.get("contractEnd") as string,
       notes: fd.get("notes") as string,
+      avatarUrl: '',
     });
     setCustomers(prev => [...prev, newCustomer]);
     setDialogOpen(false);
@@ -126,19 +128,30 @@ export default function Customers() {
       <div className="grid gap-3">
         {filtered.map((customer) => {
           const primary = customer.contacts.find(c => c.isPrimary) || customer.contacts[0];
+          const openTickets = (customer.tickets || []).filter(t => t.status === 'open' || t.status === 'in-progress').length;
           return (
             <Card key={customer.id} className="bg-card border-border hover:border-glow transition-all cursor-pointer" onClick={() => navigate(`/customers/${customer.id}`)}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <span className="text-primary font-bold text-lg">{customer.name[0]}</span>
-                    </div>
+                    <Avatar className="h-12 w-12 shrink-0">
+                      {customer.avatarUrl ? (
+                        <AvatarImage src={customer.avatarUrl} alt={customer.name} />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
+                        {customer.name[0]}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-foreground truncate">{customer.name}</h3>
                         <StatusBadge status={customer.status} />
                         {customer.industry && <Badge variant="secondary" className="text-xs">{customer.industry}</Badge>}
+                        {openTickets > 0 && (
+                          <Badge variant="destructive" className="text-xs gap-1">
+                            <TicketCheck className="h-3 w-3" />{openTickets} קריאות פתוחות
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5 flex-wrap">
                         {primary && <span>{primary.name} • <span dir="ltr">{primary.phone}</span></span>}
@@ -161,6 +174,7 @@ export default function Customers() {
                   <span>{customer.assets.length} נכסים</span>
                   <span>{customer.contacts.length} אנשי קשר</span>
                   <span>{customer.documents.length} מסמכים</span>
+                  <span>{(customer.tickets || []).length} קריאות</span>
                 </div>
               </CardContent>
             </Card>

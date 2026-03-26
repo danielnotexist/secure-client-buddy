@@ -33,6 +33,7 @@ export default function Dashboard() {
     { title: "הכנסה חודשית", value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, accent: "text-primary" },
     { title: "נכסים מנוהלים", value: stats.totalAssets, icon: HardDrive, accent: "text-primary" },
     { title: "שירותים פעילים", value: stats.totalServices, icon: Wrench, accent: "text-primary" },
+    { title: "קריאות פתוחות", value: stats.openTickets, icon: TicketCheck, accent: stats.openTickets > 0 ? "text-destructive" : "text-primary" },
     { title: "שירותים שפגים בקרוב", value: stats.expiringServices, icon: AlertTriangle, accent: "text-warning" },
   ];
 
