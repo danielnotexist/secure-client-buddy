@@ -230,6 +230,10 @@ const DEMO_CUSTOMERS: Customer[] = [
       { id: generateId(), name: 'FW-Office', category: 'פיירוול', model: 'Sophos XGS 87', manufacturer: 'Sophos', serialNumber: 'SP-001', ip: '10.10.0.1', location: 'משרד תל אביב', status: 'online', purchaseDate: '2024-01-01', warrantyEnd: '2027-01-01', notes: '', properties: { firmware: 'v20.0' } },
     ],
     documents: [],
+    avatarUrl: '',
+    tickets: [
+      { id: generateId(), subject: 'בקשת הצפנת מחשבים ניידים', description: 'הלקוחה מבקשת BitLocker על כל הלפטופים', status: 'waiting', priority: 'high', assignee: '', createdAt: '2025-03-15', updatedAt: '2025-03-19', imageUrl: '', notes: '' },
+    ],
   },
   {
     id: generateId(),
