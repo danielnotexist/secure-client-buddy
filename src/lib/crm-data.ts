@@ -324,7 +324,7 @@ export function deleteCustomer(id: string) {
 }
 
 // Generic add/remove helpers
-function addItemToCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents'>(
+function addItemToCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents' | 'tickets'>(
   customerId: string, key: K, item: Omit<Customer[K][number], 'id'>
 ): Customer[K][number] | undefined {
   const customers = getCustomers();
@@ -336,13 +336,26 @@ function addItemToCustomer<K extends 'contacts' | 'services' | 'assets' | 'docum
   return newItem;
 }
 
-function removeItemFromCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents'>(
+function removeItemFromCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents' | 'tickets'>(
   customerId: string, key: K, itemId: string
 ) {
   const customers = getCustomers();
   const customer = customers.find(c => c.id === customerId);
   if (!customer) return;
   (customer[key] as { id: string }[]) = (customer[key] as { id: string }[]).filter(i => i.id !== itemId);
+  saveCustomers(customers);
+}
+
+function updateItemInCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents' | 'tickets'>(
+  customerId: string, key: K, itemId: string, updates: Partial<Customer[K][number]>
+) {
+  const customers = getCustomers();
+  const customer = customers.find(c => c.id === customerId);
+  if (!customer) return;
+  const arr = customer[key] as { id: string }[];
+  const idx = arr.findIndex(i => i.id === itemId);
+  if (idx === -1) return;
+  arr[idx] = { ...arr[idx], ...updates };
   saveCustomers(customers);
 }
 
