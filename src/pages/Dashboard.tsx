@@ -22,8 +22,9 @@ export default function Dashboard() {
       const diff = (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
       return diff < 30 && diff > 0;
     }).length;
+    const openTickets = customers.reduce((sum, c) => sum + (c.tickets || []).filter(t => t.status === 'open' || t.status === 'in-progress').length, 0);
 
-    return { totalCustomers, activeCustomers, totalRevenue, totalAssets, totalServices, totalDocuments, expiringServices };
+    return { totalCustomers, activeCustomers, totalRevenue, totalAssets, totalServices, totalDocuments, expiringServices, openTickets };
   }, [customers]);
 
   const cards = [
