@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { getCustomers } from "@/lib/crm-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, HardDrive, DollarSign, Activity, AlertTriangle, Wrench, FileText } from "lucide-react";
+import { Users, HardDrive, DollarSign, Activity, AlertTriangle, Wrench, TicketCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -22,8 +22,9 @@ export default function Dashboard() {
       const diff = (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
       return diff < 30 && diff > 0;
     }).length;
+    const openTickets = customers.reduce((sum, c) => sum + (c.tickets || []).filter(t => t.status === 'open' || t.status === 'in-progress').length, 0);
 
-    return { totalCustomers, activeCustomers, totalRevenue, totalAssets, totalServices, totalDocuments, expiringServices };
+    return { totalCustomers, activeCustomers, totalRevenue, totalAssets, totalServices, totalDocuments, expiringServices, openTickets };
   }, [customers]);
 
   const cards = [
@@ -32,6 +33,7 @@ export default function Dashboard() {
     { title: "הכנסה חודשית", value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, accent: "text-primary" },
     { title: "נכסים מנוהלים", value: stats.totalAssets, icon: HardDrive, accent: "text-primary" },
     { title: "שירותים פעילים", value: stats.totalServices, icon: Wrench, accent: "text-primary" },
+    { title: "קריאות פתוחות", value: stats.openTickets, icon: TicketCheck, accent: stats.openTickets > 0 ? "text-destructive" : "text-primary" },
     { title: "שירותים שפגים בקרוב", value: stats.expiringServices, icon: AlertTriangle, accent: "text-warning" },
   ];
 

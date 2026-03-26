@@ -3,9 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   getCustomerById, updateCustomer,
   addContactToCustomer, addServiceToCustomer, addAssetToCustomer, addDocumentToCustomer,
+  addTicketToCustomer, removeTicketFromCustomer, updateTicketInCustomer,
   removeContactFromCustomer, removeServiceFromCustomer, removeAssetFromCustomer, removeDocumentFromCustomer,
   getServiceTypeLabel, getStatusLabel, SERVICE_TYPES, ASSET_CATEGORIES, DOCUMENT_CATEGORIES, INDUSTRIES,
-  type Customer, type Service, type Asset, type Contact, type CustomerDocument,
+  TICKET_STATUSES, TICKET_PRIORITIES,
+  type Customer, type Service, type Asset, type Contact, type CustomerDocument, type Ticket,
 } from "@/lib/crm-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,9 +22,11 @@ import { Switch } from "@/components/ui/switch";
 import {
   ArrowRight, Plus, Trash2, User, Wrench, HardDrive, FileText, Phone, Mail,
   Globe, MapPin, Building2, Calendar, CreditCard, Users, Star, Download, Eye,
+  TicketCheck, AlertCircle, ImagePlus, Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -32,8 +36,12 @@ export default function CustomerDetail() {
   const [assetDialog, setAssetDialog] = useState(false);
   const [contactDialog, setContactDialog] = useState(false);
   const [documentDialog, setDocumentDialog] = useState(false);
+  const [ticketDialog, setTicketDialog] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const ticketImageRef = useRef<HTMLInputElement>(null);
+  const [ticketImagePreview, setTicketImagePreview] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -127,6 +135,53 @@ export default function CustomerDetail() {
     });
   };
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateCustomer(customer.id, { avatarUrl: reader.result as string });
+      refresh();
+      toast.success("תמונת לקוח עודכנה");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddTicket = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const now = new Date().toISOString().split('T')[0];
+    addTicketToCustomer(customer.id, {
+      subject: fd.get("subject") as string,
+      description: fd.get("description") as string,
+      status: fd.get("status") as Ticket["status"],
+      priority: fd.get("priority") as Ticket["priority"],
+      assignee: fd.get("assignee") as string,
+      createdAt: now,
+      updatedAt: now,
+      imageUrl: ticketImagePreview,
+      notes: fd.get("notes") as string,
+    });
+    refresh();
+    setTicketDialog(false);
+    setTicketImagePreview('');
+    toast.success("קריאה נוספה");
+  };
+
+  const handleTicketImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setTicketImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleTicketStatusChange = (ticketId: string, newStatus: Ticket['status']) => {
+    updateTicketInCustomer(customer.id, ticketId, { status: newStatus, updatedAt: new Date().toISOString().split('T')[0] });
+    refresh();
+    toast.success("סטטוס קריאה עודכן");
+  };
+
   const handleSaveInfo = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -148,6 +203,17 @@ export default function CustomerDetail() {
   };
 
   const totalServicesCost = customer.services.reduce((s, srv) => s + srv.price, 0);
+  const openTickets = (customer.tickets || []).filter(t => t.status === 'open' || t.status === 'in-progress').length;
+
+  const priorityColor: Record<string, string> = {
+    low: 'bg-muted text-muted-foreground',
+    medium: 'bg-blue-100 text-blue-700',
+    high: 'bg-orange-100 text-orange-700',
+    critical: 'bg-red-100 text-red-700',
+  };
+  const priorityLabel: Record<string, string> = {
+    low: 'נמוך', medium: 'בינוני', high: 'גבוה', critical: 'קריטי',
+  };
 
   return (
     <div className="space-y-6">
@@ -156,12 +222,27 @@ export default function CustomerDetail() {
         <Button variant="ghost" size="icon" onClick={() => navigate("/customers")}>
           <ArrowRight className="h-5 w-5" />
         </Button>
+        <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+          <Avatar className="h-14 w-14">
+            {customer.avatarUrl ? <AvatarImage src={customer.avatarUrl} alt={customer.name} /> : null}
+            <AvatarFallback className="bg-primary/10 text-primary font-bold text-xl">{customer.name[0]}</AvatarFallback>
+          </Avatar>
+          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <Camera className="h-5 w-5 text-white" />
+          </div>
+          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-foreground">{customer.name}</h1>
             <StatusBadge status={customer.status} />
             {customer.industry && (
               <Badge variant="secondary" className="text-xs">{customer.industry}</Badge>
+            )}
+            {openTickets > 0 && (
+              <Badge variant="destructive" className="text-xs gap-1">
+                <TicketCheck className="h-3 w-3" />{openTickets} קריאות פתוחות
+              </Badge>
             )}
           </div>
           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
@@ -179,7 +260,7 @@ export default function CustomerDetail() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Card className="bg-card border-border">
           <CardContent className="p-4 text-center">
             <p className="text-xs text-muted-foreground">תשלום חודשי</p>
@@ -211,6 +292,12 @@ export default function CustomerDetail() {
             <p className="text-xl font-bold text-foreground mt-1">{customer.documents.length}</p>
           </CardContent>
         </Card>
+        <Card className={`border-border ${openTickets > 0 ? 'bg-red-50 border-red-200' : 'bg-card'}`}>
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">קריאות פתוחות</p>
+            <p className={`text-xl font-bold mt-1 ${openTickets > 0 ? 'text-red-600' : 'text-foreground'}`}>{openTickets}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabs */}
@@ -218,6 +305,10 @@ export default function CustomerDetail() {
         <TabsList className="w-full justify-start bg-muted/30 flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="services" className="gap-1.5"><Wrench className="h-4 w-4" />שירותים</TabsTrigger>
           <TabsTrigger value="assets" className="gap-1.5"><HardDrive className="h-4 w-4" />נכסים</TabsTrigger>
+          <TabsTrigger value="tickets" className="gap-1.5 relative">
+            <TicketCheck className="h-4 w-4" />קריאות
+            {openTickets > 0 && <span className="absolute -top-1 -left-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{openTickets}</span>}
+          </TabsTrigger>
           <TabsTrigger value="contacts" className="gap-1.5"><Users className="h-4 w-4" />אנשי קשר</TabsTrigger>
           <TabsTrigger value="documents" className="gap-1.5"><FileText className="h-4 w-4" />מסמכים</TabsTrigger>
           <TabsTrigger value="info" className="gap-1.5"><Building2 className="h-4 w-4" />פרטי חברה</TabsTrigger>
@@ -234,9 +325,7 @@ export default function CustomerDetail() {
                 <form onSubmit={handleAddService} className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1"><Label>שם השירות</Label><Input name="name" required /></div>
-                    <div className="space-y-1">
-                      <Label>ספק</Label><Input name="vendor" />
-                    </div>
+                    <div className="space-y-1"><Label>ספק</Label><Input name="vendor" /></div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
@@ -403,6 +492,107 @@ export default function CustomerDetail() {
                       <Button variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => { removeAssetFromCustomer(customer.id, a.id); refresh(); toast.success("נכס הוסר"); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ===== TICKETS TAB ===== */}
+        <TabsContent value="tickets" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-foreground">קריאות שירות ({(customer.tickets || []).length})</h3>
+            <Dialog open={ticketDialog} onOpenChange={(o) => { setTicketDialog(o); if (!o) setTicketImagePreview(''); }}>
+              <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" />קריאה חדשה</Button></DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>פתיחת קריאה חדשה</DialogTitle></DialogHeader>
+                <form onSubmit={handleAddTicket} className="space-y-3">
+                  <div className="space-y-1"><Label>נושא הקריאה</Label><Input name="subject" required placeholder="לדוגמה: תקלה במדפסת" /></div>
+                  <div className="space-y-1"><Label>תיאור</Label><Textarea name="description" placeholder="פירוט הבעיה..." /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>סטטוס</Label>
+                      <Select name="status" defaultValue="open">
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {TICKET_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>עדיפות</Label>
+                      <Select name="priority" defaultValue="medium">
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {TICKET_PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-1"><Label>מטפל</Label><Input name="assignee" placeholder="שם הטכנאי..." /></div>
+                  <div className="space-y-1">
+                    <Label>תמונה מצורפת</Label>
+                    <div className="flex items-center gap-2">
+                      <input ref={ticketImageRef} type="file" accept="image/*" className="hidden" onChange={handleTicketImageSelect} />
+                      <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => ticketImageRef.current?.click()}>
+                        <ImagePlus className="h-4 w-4" />צרף תמונה
+                      </Button>
+                      {ticketImagePreview && <img src={ticketImagePreview} alt="preview" className="h-10 w-10 rounded object-cover" />}
+                    </div>
+                  </div>
+                  <div className="space-y-1"><Label>הערות</Label><Textarea name="notes" /></div>
+                  <Button type="submit" className="w-full">פתח קריאה</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+          {(customer.tickets || []).length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <TicketCheck className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>אין קריאות שירות. לחץ על "קריאה חדשה" להתחיל.</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {(customer.tickets || []).map(ticket => (
+                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${ticket.status === 'open' || ticket.status === 'in-progress' ? 'bg-card border-r-4 border-r-red-400' : 'bg-card'}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex gap-3 flex-1 min-w-0">
+                        {ticket.imageUrl && (
+                          <a href={ticket.imageUrl} target="_blank" className="shrink-0">
+                            <img src={ticket.imageUrl} alt="" className="h-16 w-16 rounded-lg object-cover border border-border" />
+                          </a>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-foreground">{ticket.subject}</p>
+                            <StatusBadge status={ticket.status} />
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorityColor[ticket.priority]}`}>
+                              {priorityLabel[ticket.priority]}
+                            </span>
+                          </div>
+                          {ticket.description && <p className="text-sm text-muted-foreground mt-1">{ticket.description}</p>}
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+                            <span>נפתח: {ticket.createdAt}</span>
+                            <span>עודכן: {ticket.updatedAt}</span>
+                            {ticket.assignee && <span>מטפל: <strong className="text-foreground">{ticket.assignee}</strong></span>}
+                          </div>
+                          {ticket.notes && <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded">{ticket.notes}</p>}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <Select value={ticket.status} onValueChange={(v) => handleTicketStatusChange(ticket.id, v as Ticket['status'])}>
+                          <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {TICKET_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => { removeTicketFromCustomer(customer.id, ticket.id); refresh(); toast.success("קריאה נמחקה"); }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

@@ -41,10 +41,23 @@ export interface Asset {
 export interface CustomerDocument {
   id: string;
   name: string;
-  type: string; // mime or category
-  dataUrl: string; // base64 data URL for localStorage
+  type: string;
+  dataUrl: string;
   uploadedAt: string;
   category: 'contract' | 'invoice' | 'diagram' | 'photo' | 'report' | 'other';
+  notes: string;
+}
+
+export interface Ticket {
+  id: string;
+  subject: string;
+  description: string;
+  status: 'open' | 'in-progress' | 'waiting' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  assignee: string;
+  createdAt: string;
+  updatedAt: string;
+  imageUrl: string;
   notes: string;
 }
 
@@ -61,10 +74,12 @@ export interface Customer {
   contractEnd: string;
   notes: string;
   createdAt: string;
+  avatarUrl: string;
   contacts: Contact[];
   services: Service[];
   assets: Asset[];
   documents: CustomerDocument[];
+  tickets: Ticket[];
 }
 
 // ===== Labels =====
@@ -119,7 +134,27 @@ const STATUS_LABELS: Record<string, string> = {
   maintenance: 'תחזוקה',
   'needs-update': 'דרוש עדכון',
   retired: 'פורק',
+  open: 'פתוח',
+  'in-progress': 'בטיפול',
+  waiting: 'ממתין ללקוח',
+  resolved: 'נפתר',
+  closed: 'סגור',
 };
+
+export const TICKET_STATUSES: { value: Ticket['status']; label: string }[] = [
+  { value: 'open', label: 'פתוח' },
+  { value: 'in-progress', label: 'בטיפול' },
+  { value: 'waiting', label: 'ממתין ללקוח' },
+  { value: 'resolved', label: 'נפתר' },
+  { value: 'closed', label: 'סגור' },
+];
+
+export const TICKET_PRIORITIES: { value: Ticket['priority']; label: string }[] = [
+  { value: 'low', label: 'נמוך' },
+  { value: 'medium', label: 'בינוני' },
+  { value: 'high', label: 'גבוה' },
+  { value: 'critical', label: 'קריטי' },
+];
 
 export const getStatusLabel = (status: string) => STATUS_LABELS[status] || status;
 
@@ -163,6 +198,11 @@ const DEMO_CUSTOMERS: Customer[] = [
       { id: generateId(), name: 'SW-Core', category: 'סוויצ\'', model: 'Cisco Catalyst 9300', manufacturer: 'Cisco', serialNumber: 'CS-001', ip: '192.168.1.1', location: 'Rack A', status: 'online', purchaseDate: '2023-06-15', warrantyEnd: '2026-06-15', notes: 'Core switch 48 ports', properties: { ports: '48', poe: 'כן' } },
     ],
     documents: [],
+    avatarUrl: '',
+    tickets: [
+      { id: generateId(), subject: 'תקלה במדפסת קומה 3', description: 'המדפסת לא מדפיסה בצבע', status: 'open', priority: 'medium', assignee: '', createdAt: '2025-03-20', updatedAt: '2025-03-20', imageUrl: '', notes: '' },
+      { id: generateId(), subject: 'חיבור VPN לא עובד', description: 'עובד מרחוק לא מצליח להתחבר', status: 'in-progress', priority: 'high', assignee: '', createdAt: '2025-03-18', updatedAt: '2025-03-22', imageUrl: '', notes: 'בדקנו - צריך לחדש certificate' },
+    ],
   },
   {
     id: generateId(),
@@ -190,6 +230,10 @@ const DEMO_CUSTOMERS: Customer[] = [
       { id: generateId(), name: 'FW-Office', category: 'פיירוול', model: 'Sophos XGS 87', manufacturer: 'Sophos', serialNumber: 'SP-001', ip: '10.10.0.1', location: 'משרד תל אביב', status: 'online', purchaseDate: '2024-01-01', warrantyEnd: '2027-01-01', notes: '', properties: { firmware: 'v20.0' } },
     ],
     documents: [],
+    avatarUrl: '',
+    tickets: [
+      { id: generateId(), subject: 'בקשת הצפנת מחשבים ניידים', description: 'הלקוחה מבקשת BitLocker על כל הלפטופים', status: 'waiting', priority: 'high', assignee: '', createdAt: '2025-03-15', updatedAt: '2025-03-19', imageUrl: '', notes: '' },
+    ],
   },
   {
     id: generateId(),
@@ -210,6 +254,8 @@ const DEMO_CUSTOMERS: Customer[] = [
     services: [],
     assets: [],
     documents: [],
+    avatarUrl: '',
+    tickets: [],
   },
 ];
 
@@ -224,12 +270,13 @@ export function getCustomers(): Customer[] {
     }
     const parsed = JSON.parse(data);
     // Validate that data matches new schema - check first item has required fields
-    if (Array.isArray(parsed) && parsed.length > 0 && (!parsed[0].contacts || !parsed[0].assets || !parsed[0].documents)) {
-      // Old schema data - reset to demo
+    if (Array.isArray(parsed) && parsed.length > 0 && (!parsed[0].contacts || !parsed[0].assets || !parsed[0].documents || !parsed[0].tickets)) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_CUSTOMERS));
       return DEMO_CUSTOMERS;
     }
-    return parsed;
+    // Ensure avatarUrl and tickets exist on all entries (migration)
+    const migrated = parsed.map((c: any) => ({ avatarUrl: '', tickets: [], ...c }));
+    return migrated;
   } catch {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_CUSTOMERS));
@@ -245,7 +292,7 @@ export function getCustomerById(id: string): Customer | undefined {
   return getCustomers().find(c => c.id === id);
 }
 
-export function addCustomer(customer: Omit<Customer, 'id' | 'createdAt' | 'contacts' | 'services' | 'assets' | 'documents'>): Customer {
+export function addCustomer(customer: Omit<Customer, 'id' | 'createdAt' | 'contacts' | 'services' | 'assets' | 'documents' | 'tickets'>): Customer {
   const customers = getCustomers();
   const newCustomer: Customer = {
     ...customer,
@@ -255,6 +302,7 @@ export function addCustomer(customer: Omit<Customer, 'id' | 'createdAt' | 'conta
     services: [],
     assets: [],
     documents: [],
+    tickets: [],
   };
   customers.push(newCustomer);
   saveCustomers(customers);
@@ -276,7 +324,7 @@ export function deleteCustomer(id: string) {
 }
 
 // Generic add/remove helpers
-function addItemToCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents'>(
+function addItemToCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents' | 'tickets'>(
   customerId: string, key: K, item: Omit<Customer[K][number], 'id'>
 ): Customer[K][number] | undefined {
   const customers = getCustomers();
@@ -288,7 +336,7 @@ function addItemToCustomer<K extends 'contacts' | 'services' | 'assets' | 'docum
   return newItem;
 }
 
-function removeItemFromCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents'>(
+function removeItemFromCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents' | 'tickets'>(
   customerId: string, key: K, itemId: string
 ) {
   const customers = getCustomers();
@@ -298,12 +346,29 @@ function removeItemFromCustomer<K extends 'contacts' | 'services' | 'assets' | '
   saveCustomers(customers);
 }
 
+function updateItemInCustomer<K extends 'contacts' | 'services' | 'assets' | 'documents' | 'tickets'>(
+  customerId: string, key: K, itemId: string, updates: Partial<Customer[K][number]>
+) {
+  const customers = getCustomers();
+  const customer = customers.find(c => c.id === customerId);
+  if (!customer) return;
+  const arr = customer[key] as { id: string }[];
+  const idx = arr.findIndex(i => i.id === itemId);
+  if (idx === -1) return;
+  arr[idx] = { ...arr[idx], ...updates };
+  saveCustomers(customers);
+}
+
 export const addContactToCustomer = (cid: string, item: Omit<Contact, 'id'>) => addItemToCustomer(cid, 'contacts', item);
 export const addServiceToCustomer = (cid: string, item: Omit<Service, 'id'>) => addItemToCustomer(cid, 'services', item);
 export const addAssetToCustomer = (cid: string, item: Omit<Asset, 'id'>) => addItemToCustomer(cid, 'assets', item);
 export const addDocumentToCustomer = (cid: string, item: Omit<CustomerDocument, 'id'>) => addItemToCustomer(cid, 'documents', item);
+export const addTicketToCustomer = (cid: string, item: Omit<Ticket, 'id'>) => addItemToCustomer(cid, 'tickets', item);
 
 export const removeContactFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'contacts', id);
 export const removeServiceFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'services', id);
 export const removeAssetFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'assets', id);
 export const removeDocumentFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'documents', id);
+export const removeTicketFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'tickets', id);
+
+export const updateTicketInCustomer = (cid: string, ticketId: string, updates: Partial<Ticket>) => updateItemInCustomer(cid, 'tickets', ticketId, updates);
