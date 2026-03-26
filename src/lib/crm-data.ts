@@ -74,10 +74,12 @@ export interface Customer {
   contractEnd: string;
   notes: string;
   createdAt: string;
+  avatarUrl: string;
   contacts: Contact[];
   services: Service[];
   assets: Asset[];
   documents: CustomerDocument[];
+  tickets: Ticket[];
 }
 
 // ===== Labels =====
