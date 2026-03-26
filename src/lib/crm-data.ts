@@ -134,7 +134,27 @@ const STATUS_LABELS: Record<string, string> = {
   maintenance: 'תחזוקה',
   'needs-update': 'דרוש עדכון',
   retired: 'פורק',
+  open: 'פתוח',
+  'in-progress': 'בטיפול',
+  waiting: 'ממתין ללקוח',
+  resolved: 'נפתר',
+  closed: 'סגור',
 };
+
+export const TICKET_STATUSES: { value: Ticket['status']; label: string }[] = [
+  { value: 'open', label: 'פתוח' },
+  { value: 'in-progress', label: 'בטיפול' },
+  { value: 'waiting', label: 'ממתין ללקוח' },
+  { value: 'resolved', label: 'נפתר' },
+  { value: 'closed', label: 'סגור' },
+];
+
+export const TICKET_PRIORITIES: { value: Ticket['priority']; label: string }[] = [
+  { value: 'low', label: 'נמוך' },
+  { value: 'medium', label: 'בינוני' },
+  { value: 'high', label: 'גבוה' },
+  { value: 'critical', label: 'קריטי' },
+];
 
 export const getStatusLabel = (status: string) => STATUS_LABELS[status] || status;
 
