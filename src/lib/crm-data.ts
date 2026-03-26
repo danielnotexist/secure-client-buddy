@@ -270,12 +270,13 @@ export function getCustomers(): Customer[] {
     }
     const parsed = JSON.parse(data);
     // Validate that data matches new schema - check first item has required fields
-    if (Array.isArray(parsed) && parsed.length > 0 && (!parsed[0].contacts || !parsed[0].assets || !parsed[0].documents)) {
-      // Old schema data - reset to demo
+    if (Array.isArray(parsed) && parsed.length > 0 && (!parsed[0].contacts || !parsed[0].assets || !parsed[0].documents || !parsed[0].tickets)) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_CUSTOMERS));
       return DEMO_CUSTOMERS;
     }
-    return parsed;
+    // Ensure avatarUrl and tickets exist on all entries (migration)
+    const migrated = parsed.map((c: any) => ({ avatarUrl: '', tickets: [], ...c }));
+    return migrated;
   } catch {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_CUSTOMERS));
