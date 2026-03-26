@@ -363,8 +363,12 @@ export const addContactToCustomer = (cid: string, item: Omit<Contact, 'id'>) => 
 export const addServiceToCustomer = (cid: string, item: Omit<Service, 'id'>) => addItemToCustomer(cid, 'services', item);
 export const addAssetToCustomer = (cid: string, item: Omit<Asset, 'id'>) => addItemToCustomer(cid, 'assets', item);
 export const addDocumentToCustomer = (cid: string, item: Omit<CustomerDocument, 'id'>) => addItemToCustomer(cid, 'documents', item);
+export const addTicketToCustomer = (cid: string, item: Omit<Ticket, 'id'>) => addItemToCustomer(cid, 'tickets', item);
 
 export const removeContactFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'contacts', id);
 export const removeServiceFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'services', id);
 export const removeAssetFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'assets', id);
 export const removeDocumentFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'documents', id);
+export const removeTicketFromCustomer = (cid: string, id: string) => removeItemFromCustomer(cid, 'tickets', id);
+
+export const updateTicketInCustomer = (cid: string, ticketId: string, updates: Partial<Ticket>) => updateItemInCustomer(cid, 'tickets', ticketId, updates);
