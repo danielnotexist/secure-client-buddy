@@ -233,7 +233,7 @@ const DEMO_CUSTOMERS: Customer[] = [
     documents: [],
     avatarUrl: '',
     tickets: [
-      { id: generateId(), subject: 'בקשת הצפנת מחשבים ניידים', description: 'הלקוחה מבקשת BitLocker על כל הלפטופים', status: 'waiting', priority: 'high', assignee: '', createdAt: '2025-03-15', updatedAt: '2025-03-19', imageUrl: '', notes: '' },
+      { id: generateId(), subject: 'בקשת הצפנת מחשבים ניידים', description: 'הלקוחה מבקשת BitLocker על כל הלפטופים', status: 'waiting', priority: 'high', assignee: '', createdAt: '2025-03-15', updatedAt: '2025-03-19', imageUrl: '', notes: '', resolution: '' },
     ],
   },
   {
