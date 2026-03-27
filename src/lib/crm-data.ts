@@ -59,6 +59,7 @@ export interface Ticket {
   updatedAt: string;
   imageUrl: string;
   notes: string;
+  resolution: string;
 }
 
 export interface Customer {
@@ -200,8 +201,8 @@ const DEMO_CUSTOMERS: Customer[] = [
     documents: [],
     avatarUrl: '',
     tickets: [
-      { id: generateId(), subject: 'תקלה במדפסת קומה 3', description: 'המדפסת לא מדפיסה בצבע', status: 'open', priority: 'medium', assignee: '', createdAt: '2025-03-20', updatedAt: '2025-03-20', imageUrl: '', notes: '' },
-      { id: generateId(), subject: 'חיבור VPN לא עובד', description: 'עובד מרחוק לא מצליח להתחבר', status: 'in-progress', priority: 'high', assignee: '', createdAt: '2025-03-18', updatedAt: '2025-03-22', imageUrl: '', notes: 'בדקנו - צריך לחדש certificate' },
+      { id: generateId(), subject: 'תקלה במדפסת קומה 3', description: 'המדפסת לא מדפיסה בצבע', status: 'open', priority: 'medium', assignee: '', createdAt: '2025-03-20', updatedAt: '2025-03-20', imageUrl: '', notes: '', resolution: '' },
+      { id: generateId(), subject: 'חיבור VPN לא עובד', description: 'עובד מרחוק לא מצליח להתחבר', status: 'in-progress', priority: 'high', assignee: '', createdAt: '2025-03-18', updatedAt: '2025-03-22', imageUrl: '', notes: 'בדקנו - צריך לחדש certificate', resolution: '' },
     ],
   },
   {
@@ -232,7 +233,7 @@ const DEMO_CUSTOMERS: Customer[] = [
     documents: [],
     avatarUrl: '',
     tickets: [
-      { id: generateId(), subject: 'בקשת הצפנת מחשבים ניידים', description: 'הלקוחה מבקשת BitLocker על כל הלפטופים', status: 'waiting', priority: 'high', assignee: '', createdAt: '2025-03-15', updatedAt: '2025-03-19', imageUrl: '', notes: '' },
+      { id: generateId(), subject: 'בקשת הצפנת מחשבים ניידים', description: 'הלקוחה מבקשת BitLocker על כל הלפטופים', status: 'waiting', priority: 'high', assignee: '', createdAt: '2025-03-15', updatedAt: '2025-03-19', imageUrl: '', notes: '', resolution: '' },
     ],
   },
   {

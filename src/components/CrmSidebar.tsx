@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Shield, FolderKanban } from "lucide-react";
+import { LayoutDashboard, Users, Shield, FolderKanban, TicketCheck } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -16,6 +16,7 @@ const items = [
   { title: "לוח בקרה", url: "/", icon: LayoutDashboard },
   { title: "לקוחות", url: "/customers", icon: Users },
   { title: "פרויקטים", url: "/projects", icon: FolderKanban },
+  { title: "קריאות", url: "/tickets", icon: TicketCheck },
 ];
 
 export function CrmSidebar() {

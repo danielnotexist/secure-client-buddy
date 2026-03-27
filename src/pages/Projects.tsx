@@ -3,35 +3,34 @@ import {
   getProjects, addProject, deleteProject, updateProject,
   addTaskToProject, updateTaskInProject, removeTaskFromProject,
   PROJECT_STATUSES, PROJECT_PRIORITIES, TASK_STATUSES,
-  getProjectStatusLabel, getTaskStatusLabel,
+  getProjectStatusLabel,
   type Project, type ProjectTask,
 } from "@/lib/projects-data";
 import { getCustomers } from "@/lib/crm-data";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Search, FolderKanban, CheckCircle2, Clock, ListTodo, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Search, FolderKanban, CheckCircle2, Clock, ListTodo, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
 const priorityColor: Record<string, string> = {
-  low: 'bg-muted text-muted-foreground',
-  medium: 'bg-blue-50 text-blue-700 border-blue-200',
-  high: 'bg-orange-50 text-orange-700 border-orange-200',
-  critical: 'bg-red-50 text-red-700 border-red-200',
+  low: 'bg-muted/50 text-muted-foreground',
+  medium: 'bg-blue-500/15 text-blue-400',
+  high: 'bg-orange-500/15 text-orange-400',
+  critical: 'bg-red-500/15 text-red-400',
 };
 
 const statusColor: Record<string, string> = {
-  planning: 'bg-muted text-muted-foreground',
-  active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'on-hold': 'bg-amber-50 text-amber-700 border-amber-200',
-  completed: 'bg-primary/10 text-primary',
-  cancelled: 'bg-red-50 text-red-500',
+  planning: 'bg-muted/50 text-muted-foreground',
+  active: 'bg-emerald-500/15 text-emerald-400',
+  'on-hold': 'bg-amber-500/15 text-amber-400',
+  completed: 'bg-primary/15 text-primary',
+  cancelled: 'bg-red-500/15 text-red-400',
 };
 
 export default function Projects() {
@@ -40,6 +39,7 @@ export default function Projects() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [taskDialogProject, setTaskDialogProject] = useState<string | null>(null);
+  const [editProject, setEditProject] = useState<Project | null>(null);
   const customers = useMemo(() => getCustomers(), []);
 
   const filtered = useMemo(() => {
@@ -76,6 +76,29 @@ export default function Projects() {
     toast.success("פרויקט נוצר בהצלחה");
   };
 
+  const handleEditProject = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editProject) return;
+    const fd = new FormData(e.currentTarget);
+    const customerId = fd.get("customerId") as string;
+    const customer = customers.find(c => c.id === customerId);
+    updateProject(editProject.id, {
+      name: fd.get("name") as string,
+      customerId,
+      customerName: customer?.name || editProject.customerName,
+      status: fd.get("status") as Project["status"],
+      priority: fd.get("priority") as Project["priority"],
+      description: fd.get("description") as string,
+      startDate: fd.get("startDate") as string,
+      endDate: fd.get("endDate") as string,
+      budget: Number(fd.get("budget") || 0),
+      notes: fd.get("notes") as string,
+    });
+    refresh();
+    setEditProject(null);
+    toast.success("פרויקט עודכן");
+  };
+
   const handleAddTask = (e: React.FormEvent<HTMLFormElement>, projectId: string) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -91,9 +114,45 @@ export default function Projects() {
     toast.success("משימה נוספה");
   };
 
-  // Stats
   const activeProjects = projects.filter(p => p.status === 'active').length;
   const completedProjects = projects.filter(p => p.status === 'completed').length;
+
+  const ProjectForm = ({ onSubmit, defaults, submitLabel }: { onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; defaults?: Project; submitLabel: string }) => (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="space-y-1"><Label>שם הפרויקט</Label><Input name="name" required defaultValue={defaults?.name} /></div>
+      <div className="space-y-1">
+        <Label>לקוח</Label>
+        <Select name="customerId" required defaultValue={defaults?.customerId}>
+          <SelectTrigger><SelectValue placeholder="בחר לקוח..." /></SelectTrigger>
+          <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label>סטטוס</Label>
+          <Select name="status" defaultValue={defaults?.status || "planning"}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{PROJECT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>עדיפות</Label>
+          <Select name="priority" defaultValue={defaults?.priority || "medium"}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{PROJECT_PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1"><Label>תאריך התחלה</Label><Input name="startDate" type="date" dir="ltr" defaultValue={defaults?.startDate} /></div>
+        <div className="space-y-1"><Label>תאריך סיום</Label><Input name="endDate" type="date" dir="ltr" defaultValue={defaults?.endDate} /></div>
+      </div>
+      <div className="space-y-1"><Label>תקציב (₪)</Label><Input name="budget" type="number" dir="ltr" defaultValue={defaults?.budget || 0} /></div>
+      <div className="space-y-1"><Label>תיאור</Label><Textarea name="description" defaultValue={defaults?.description} /></div>
+      <div className="space-y-1"><Label>הערות</Label><Textarea name="notes" defaultValue={defaults?.notes} /></div>
+      <Button type="submit" className="w-full">{submitLabel}</Button>
+    </form>
+  );
 
   return (
     <div className="space-y-8">
@@ -109,96 +168,31 @@ export default function Projects() {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>פרויקט חדש</DialogTitle></DialogHeader>
-            <form onSubmit={handleAdd} className="space-y-4">
-              <div className="space-y-1"><Label>שם הפרויקט</Label><Input name="name" required /></div>
-              <div className="space-y-1">
-                <Label>לקוח</Label>
-                <Select name="customerId" required>
-                  <SelectTrigger><SelectValue placeholder="בחר לקוח..." /></SelectTrigger>
-                  <SelectContent>
-                    {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>סטטוס</Label>
-                  <Select name="status" defaultValue="planning">
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {PROJECT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label>עדיפות</Label>
-                  <Select name="priority" defaultValue="medium">
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {PROJECT_PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1"><Label>תאריך התחלה</Label><Input name="startDate" type="date" dir="ltr" /></div>
-                <div className="space-y-1"><Label>תאריך סיום</Label><Input name="endDate" type="date" dir="ltr" /></div>
-              </div>
-              <div className="space-y-1"><Label>תקציב (₪)</Label><Input name="budget" type="number" dir="ltr" defaultValue={0} /></div>
-              <div className="space-y-1"><Label>תיאור</Label><Textarea name="description" /></div>
-              <div className="space-y-1"><Label>הערות</Label><Textarea name="notes" /></div>
-              <Button type="submit" className="w-full">צור פרויקט</Button>
-            </form>
+            <ProjectForm onSubmit={handleAdd} submitLabel="צור פרויקט" />
           </DialogContent>
         </Dialog>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-border">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
-              <FolderKanban className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">סה"כ פרויקטים</p>
-              <p className="text-2xl font-bold text-foreground">{projects.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-11 w-11 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">פעילים</p>
-              <p className="text-2xl font-bold text-foreground">{activeProjects}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">הושלמו</p>
-              <p className="text-2xl font-bold text-foreground">{completedProjects}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-11 w-11 rounded-xl bg-amber-50 flex items-center justify-center">
-              <ListTodo className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">משימות פתוחות</p>
-              <p className="text-2xl font-bold text-foreground">{projects.reduce((sum, p) => sum + p.tasks.filter(t => t.status !== 'done').length, 0)}</p>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'סה"כ פרויקטים', value: projects.length, icon: FolderKanban, color: "bg-primary/15 text-primary" },
+          { label: 'פעילים', value: activeProjects, icon: Clock, color: "bg-emerald-500/15 text-emerald-400" },
+          { label: 'הושלמו', value: completedProjects, icon: CheckCircle2, color: "bg-primary/15 text-primary" },
+          { label: 'משימות פתוחות', value: projects.reduce((sum, p) => sum + p.tasks.filter(t => t.status !== 'done').length, 0), icon: ListTodo, color: "bg-amber-500/15 text-amber-400" },
+        ].map((s, i) => (
+          <Card key={i} className="border-border">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${s.color}`}>
+                <s.icon className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+                <p className="text-2xl font-bold text-foreground">{s.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Search */}
@@ -225,7 +219,6 @@ export default function Projects() {
           return (
             <Card key={project.id} className="border-border overflow-hidden">
               <CardContent className="p-0">
-                {/* Project Header */}
                 <div
                   className="p-5 cursor-pointer hover:bg-muted/20 transition-colors"
                   onClick={() => setExpandedProject(isExpanded ? null : project.id)}
@@ -234,10 +227,10 @@ export default function Projects() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-lg text-foreground">{project.name}</h3>
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${statusColor[project.status]}`}>
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusColor[project.status]}`}>
                           {getProjectStatusLabel(project.status)}
                         </span>
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${priorityColor[project.priority]}`}>
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${priorityColor[project.priority]}`}>
                           {PROJECT_PRIORITIES.find(p => p.value === project.priority)?.label}
                         </span>
                       </div>
@@ -255,7 +248,10 @@ export default function Projects() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditProject(project); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); deleteProject(project.id); refresh(); toast.success("פרויקט נמחק"); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -264,7 +260,6 @@ export default function Projects() {
                   </div>
                 </div>
 
-                {/* Expanded Tasks */}
                 {isExpanded && (
                   <div className="border-t border-border bg-muted/10 p-5 space-y-4">
                     <div className="flex items-center justify-between">
@@ -311,17 +306,6 @@ export default function Projects() {
                         ))}
                       </div>
                     )}
-
-                    {/* Status change */}
-                    <div className="flex items-center gap-3 pt-2 border-t border-border">
-                      <Label className="text-sm">סטטוס פרויקט:</Label>
-                      <Select value={project.status} onValueChange={v => { updateProject(project.id, { status: v as Project['status'] }); refresh(); toast.success("סטטוס עודכן"); }}>
-                        <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {PROJECT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
                 )}
               </CardContent>
@@ -329,6 +313,14 @@ export default function Projects() {
           );
         })}
       </div>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={!!editProject} onOpenChange={(o) => !o && setEditProject(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>עריכת פרויקט</DialogTitle></DialogHeader>
+          {editProject && <ProjectForm onSubmit={handleEditProject} defaults={editProject} submitLabel="שמור שינויים" />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

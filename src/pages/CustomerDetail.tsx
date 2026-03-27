@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   ArrowRight, Plus, Trash2, User, Wrench, HardDrive, FileText, Phone, Mail,
   Globe, MapPin, Building2, Calendar, CreditCard, Users, Star, Download, Eye,
-  TicketCheck, AlertCircle, ImagePlus, Camera,
+  TicketCheck, AlertCircle, ImagePlus, Camera, Pencil, CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,8 @@ export default function CustomerDetail() {
   const [contactDialog, setContactDialog] = useState(false);
   const [documentDialog, setDocumentDialog] = useState(false);
   const [ticketDialog, setTicketDialog] = useState(false);
+  const [editTicketData, setEditTicketData] = useState<Ticket | null>(null);
+  const [closeTicketData, setCloseTicketData] = useState<Ticket | null>(null);
   const [editMode, setEditMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -161,6 +163,7 @@ export default function CustomerDetail() {
       updatedAt: now,
       imageUrl: ticketImagePreview,
       notes: fd.get("notes") as string,
+      resolution: '',
     });
     refresh();
     setTicketDialog(false);
@@ -180,6 +183,37 @@ export default function CustomerDetail() {
     updateTicketInCustomer(customer.id, ticketId, { status: newStatus, updatedAt: new Date().toISOString().split('T')[0] });
     refresh();
     toast.success("סטטוס קריאה עודכן");
+  };
+
+  const handleEditTicket = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editTicketData) return;
+    const fd = new FormData(e.currentTarget);
+    updateTicketInCustomer(customer.id, editTicketData.id, {
+      subject: fd.get("subject") as string,
+      description: fd.get("description") as string,
+      priority: fd.get("priority") as Ticket["priority"],
+      assignee: fd.get("assignee") as string,
+      notes: fd.get("notes") as string,
+      updatedAt: new Date().toISOString().split('T')[0],
+    });
+    refresh();
+    setEditTicketData(null);
+    toast.success("קריאה עודכנה");
+  };
+
+  const handleCloseTicket = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!closeTicketData) return;
+    const fd = new FormData(e.currentTarget);
+    updateTicketInCustomer(customer.id, closeTicketData.id, {
+      status: fd.get("status") as Ticket["status"],
+      resolution: fd.get("resolution") as string,
+      updatedAt: new Date().toISOString().split('T')[0],
+    });
+    refresh();
+    setCloseTicketData(null);
+    toast.success("קריאה נסגרה");
   };
 
   const handleSaveInfo = (e: React.FormEvent<HTMLFormElement>) => {
@@ -206,10 +240,10 @@ export default function CustomerDetail() {
   const openTickets = (customer.tickets || []).filter(t => t.status === 'open' || t.status === 'in-progress').length;
 
   const priorityColor: Record<string, string> = {
-    low: 'bg-muted text-muted-foreground',
-    medium: 'bg-blue-100 text-blue-700',
-    high: 'bg-orange-100 text-orange-700',
-    critical: 'bg-red-100 text-red-700',
+    low: 'bg-muted/50 text-muted-foreground',
+    medium: 'bg-blue-500/15 text-blue-400',
+    high: 'bg-orange-500/15 text-orange-400',
+    critical: 'bg-red-500/15 text-red-400',
   };
   const priorityLabel: Record<string, string> = {
     low: 'נמוך', medium: 'בינוני', high: 'גבוה', critical: 'קריטי',
@@ -535,7 +569,7 @@ export default function CustomerDetail() {
           ) : (
             <div className="grid gap-3">
               {(customer.tickets || []).map(ticket => (
-                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${ticket.status === 'open' || ticket.status === 'in-progress' ? 'bg-card border-r-4 border-r-red-400' : 'bg-card'}`}>
+                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${(ticket.status === 'open' || ticket.status === 'in-progress') ? 'border-r-4 border-r-red-500/60' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex gap-3 flex-1 min-w-0">
@@ -558,16 +592,24 @@ export default function CustomerDetail() {
                             <span>עודכן: {ticket.updatedAt}</span>
                             {ticket.assignee && <span>מטפל: <strong className="text-foreground">{ticket.assignee}</strong></span>}
                           </div>
-                          {ticket.notes && <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded">{ticket.notes}</p>}
+                          {ticket.resolution && (
+                            <div className="mt-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-sm">
+                              <span className="font-medium text-emerald-400">פתרון: </span>
+                              <span className="text-foreground">{ticket.resolution}</span>
+                            </div>
+                          )}
+                          {ticket.notes && !ticket.resolution && <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded">{ticket.notes}</p>}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1 shrink-0">
-                        <Select value={ticket.status} onValueChange={(v) => handleTicketStatusChange(ticket.id, v as Ticket['status'])}>
-                          <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {TICKET_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTicketData(ticket)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {ticket.status !== 'closed' && ticket.status !== 'resolved' && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-400" onClick={() => setCloseTicketData(ticket)}>
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => { removeTicketFromCustomer(customer.id, ticket.id); refresh(); toast.success("קריאה נמחקה"); }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -773,6 +815,58 @@ export default function CustomerDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Ticket Dialog */}
+      <Dialog open={!!editTicketData} onOpenChange={(o) => !o && setEditTicketData(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>עריכת קריאה</DialogTitle></DialogHeader>
+          {editTicketData && (
+            <form onSubmit={handleEditTicket} className="space-y-3">
+              <div className="space-y-1"><Label>נושא</Label><Input name="subject" defaultValue={editTicketData.subject} required /></div>
+              <div className="space-y-1"><Label>תיאור</Label><Textarea name="description" defaultValue={editTicketData.description} /></div>
+              <div className="space-y-1">
+                <Label>עדיפות</Label>
+                <Select name="priority" defaultValue={editTicketData.priority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{TICKET_PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1"><Label>מטפל</Label><Input name="assignee" defaultValue={editTicketData.assignee} /></div>
+              <div className="space-y-1"><Label>הערות</Label><Textarea name="notes" defaultValue={editTicketData.notes} /></div>
+              <Button type="submit" className="w-full">שמור שינויים</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Ticket Dialog */}
+      <Dialog open={!!closeTicketData} onOpenChange={(o) => !o && setCloseTicketData(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>סגירת קריאה</DialogTitle></DialogHeader>
+          {closeTicketData && (
+            <form onSubmit={handleCloseTicket} className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                <p className="font-semibold text-foreground">{closeTicketData.subject}</p>
+              </div>
+              <div className="space-y-1">
+                <Label>סטטוס סגירה</Label>
+                <Select name="status" defaultValue="resolved">
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resolved">נפתר</SelectItem>
+                    <SelectItem value="closed">סגור</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>פתרון / סיבת סגירה</Label>
+                <Textarea name="resolution" required placeholder="תאר את הפתרון או סיבת הסגירה..." rows={4} />
+              </div>
+              <Button type="submit" className="w-full">סגור קריאה</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
