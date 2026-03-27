@@ -31,14 +31,14 @@ export default function Dashboard() {
   }, [customers, projects]);
 
   const cards = [
-    { title: 'סה"כ לקוחות', value: stats.totalCustomers, icon: Users, color: "bg-primary/10 text-primary" },
-    { title: "לקוחות פעילים", value: stats.activeCustomers, icon: Activity, color: "bg-emerald-50 text-emerald-600" },
-    { title: "הכנסה חודשית", value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: "bg-primary/10 text-primary" },
-    { title: "נכסים מנוהלים", value: stats.totalAssets, icon: HardDrive, color: "bg-violet-50 text-violet-600" },
-    { title: "שירותים פעילים", value: stats.totalServices, icon: Wrench, color: "bg-sky-50 text-sky-600" },
-    { title: "פרויקטים פעילים", value: stats.activeProjects, icon: FolderKanban, color: "bg-indigo-50 text-indigo-600" },
-    { title: "קריאות פתוחות", value: stats.openTickets, icon: TicketCheck, color: stats.openTickets > 0 ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground" },
-    { title: "שירותים שפגים בקרוב", value: stats.expiringServices, icon: AlertTriangle, color: stats.expiringServices > 0 ? "bg-amber-50 text-amber-600" : "bg-muted text-muted-foreground" },
+    { title: 'סה"כ לקוחות', value: stats.totalCustomers, icon: Users, color: "bg-primary/15 text-primary" },
+    { title: "לקוחות פעילים", value: stats.activeCustomers, icon: Activity, color: "bg-emerald-500/15 text-emerald-400" },
+    { title: "הכנסה חודשית", value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: "bg-primary/15 text-primary" },
+    { title: "נכסים מנוהלים", value: stats.totalAssets, icon: HardDrive, color: "bg-violet-500/15 text-violet-400" },
+    { title: "שירותים פעילים", value: stats.totalServices, icon: Wrench, color: "bg-sky-500/15 text-sky-400" },
+    { title: "פרויקטים פעילים", value: stats.activeProjects, icon: FolderKanban, color: "bg-indigo-500/15 text-indigo-400" },
+    { title: "קריאות פתוחות", value: stats.openTickets, icon: TicketCheck, color: stats.openTickets > 0 ? "bg-red-500/15 text-red-400" : "bg-muted/50 text-muted-foreground" },
+    { title: "שירותים שפגים בקרוב", value: stats.expiringServices, icon: AlertTriangle, color: stats.expiringServices > 0 ? "bg-amber-500/15 text-amber-400" : "bg-muted/50 text-muted-foreground" },
   ];
 
   return (
