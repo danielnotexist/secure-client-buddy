@@ -161,6 +161,7 @@ export default function CustomerDetail() {
       updatedAt: now,
       imageUrl: ticketImagePreview,
       notes: fd.get("notes") as string,
+      resolution: '',
     });
     refresh();
     setTicketDialog(false);
