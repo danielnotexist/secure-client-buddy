@@ -569,7 +569,7 @@ export default function CustomerDetail() {
           ) : (
             <div className="grid gap-3">
               {(customer.tickets || []).map(ticket => (
-                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${ticket.status === 'open' || ticket.status === 'in-progress' ? 'bg-card border-r-4 border-r-red-400' : 'bg-card'}`}>
+                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${(ticket.status === 'open' || ticket.status === 'in-progress') ? 'border-r-4 border-r-red-500/60' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex gap-3 flex-1 min-w-0">
@@ -592,16 +592,24 @@ export default function CustomerDetail() {
                             <span>עודכן: {ticket.updatedAt}</span>
                             {ticket.assignee && <span>מטפל: <strong className="text-foreground">{ticket.assignee}</strong></span>}
                           </div>
-                          {ticket.notes && <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded">{ticket.notes}</p>}
+                          {ticket.resolution && (
+                            <div className="mt-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-sm">
+                              <span className="font-medium text-emerald-400">פתרון: </span>
+                              <span className="text-foreground">{ticket.resolution}</span>
+                            </div>
+                          )}
+                          {ticket.notes && !ticket.resolution && <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded">{ticket.notes}</p>}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1 shrink-0">
-                        <Select value={ticket.status} onValueChange={(v) => handleTicketStatusChange(ticket.id, v as Ticket['status'])}>
-                          <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {TICKET_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTicketData(ticket)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {ticket.status !== 'closed' && ticket.status !== 'resolved' && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-400" onClick={() => setCloseTicketData(ticket)}>
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => { removeTicketFromCustomer(customer.id, ticket.id); refresh(); toast.success("קריאה נמחקה"); }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
