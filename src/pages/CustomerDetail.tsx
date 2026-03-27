@@ -214,6 +214,7 @@ export default function CustomerDetail() {
     refresh();
     setCloseTicketData(null);
     toast.success("קריאה נסגרה");
+  };
 
   const handleSaveInfo = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
