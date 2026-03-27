@@ -37,6 +37,8 @@ export default function CustomerDetail() {
   const [contactDialog, setContactDialog] = useState(false);
   const [documentDialog, setDocumentDialog] = useState(false);
   const [ticketDialog, setTicketDialog] = useState(false);
+  const [editTicketData, setEditTicketData] = useState<Ticket | null>(null);
+  const [closeTicketData, setCloseTicketData] = useState<Ticket | null>(null);
   const [editMode, setEditMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
