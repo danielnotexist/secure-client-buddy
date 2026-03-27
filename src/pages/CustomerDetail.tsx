@@ -815,6 +815,58 @@ export default function CustomerDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Ticket Dialog */}
+      <Dialog open={!!editTicketData} onOpenChange={(o) => !o && setEditTicketData(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>עריכת קריאה</DialogTitle></DialogHeader>
+          {editTicketData && (
+            <form onSubmit={handleEditTicket} className="space-y-3">
+              <div className="space-y-1"><Label>נושא</Label><Input name="subject" defaultValue={editTicketData.subject} required /></div>
+              <div className="space-y-1"><Label>תיאור</Label><Textarea name="description" defaultValue={editTicketData.description} /></div>
+              <div className="space-y-1">
+                <Label>עדיפות</Label>
+                <Select name="priority" defaultValue={editTicketData.priority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{TICKET_PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1"><Label>מטפל</Label><Input name="assignee" defaultValue={editTicketData.assignee} /></div>
+              <div className="space-y-1"><Label>הערות</Label><Textarea name="notes" defaultValue={editTicketData.notes} /></div>
+              <Button type="submit" className="w-full">שמור שינויים</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Ticket Dialog */}
+      <Dialog open={!!closeTicketData} onOpenChange={(o) => !o && setCloseTicketData(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>סגירת קריאה</DialogTitle></DialogHeader>
+          {closeTicketData && (
+            <form onSubmit={handleCloseTicket} className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                <p className="font-semibold text-foreground">{closeTicketData.subject}</p>
+              </div>
+              <div className="space-y-1">
+                <Label>סטטוס סגירה</Label>
+                <Select name="status" defaultValue="resolved">
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resolved">נפתר</SelectItem>
+                    <SelectItem value="closed">סגור</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>פתרון / סיבת סגירה</Label>
+                <Textarea name="resolution" required placeholder="תאר את הפתרון או סיבת הסגירה..." rows={4} />
+              </div>
+              <Button type="submit" className="w-full">סגור קריאה</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
