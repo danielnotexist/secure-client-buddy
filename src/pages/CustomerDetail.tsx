@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   ArrowRight, Plus, Trash2, User, Wrench, HardDrive, FileText, Phone, Mail,
   Globe, MapPin, Building2, Calendar, CreditCard, Users, Star, Download, Eye,
-  TicketCheck, AlertCircle, ImagePlus, Camera,
+  TicketCheck, AlertCircle, ImagePlus, Camera, Pencil, CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
