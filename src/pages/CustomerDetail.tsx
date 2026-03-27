@@ -260,44 +260,23 @@ export default function CustomerDetail() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">תשלום חודשי</p>
-            <p className="text-xl font-bold text-primary mt-1">₪{customer.monthlyPayment.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">שירותים</p>
-            <p className="text-xl font-bold text-foreground mt-1">{customer.services.length}</p>
-            <p className="text-xs text-muted-foreground">₪{totalServicesCost.toLocaleString()}/חודש</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">נכסים</p>
-            <p className="text-xl font-bold text-foreground mt-1">{customer.assets.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">אנשי קשר</p>
-            <p className="text-xl font-bold text-foreground mt-1">{customer.contacts.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">מסמכים</p>
-            <p className="text-xl font-bold text-foreground mt-1">{customer.documents.length}</p>
-          </CardContent>
-        </Card>
-        <Card className={`border-border ${openTickets > 0 ? 'bg-red-50 border-red-200' : 'bg-card'}`}>
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">קריאות פתוחות</p>
-            <p className={`text-xl font-bold mt-1 ${openTickets > 0 ? 'text-red-600' : 'text-foreground'}`}>{openTickets}</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+        {[
+          { label: 'תשלום חודשי', value: `₪${customer.monthlyPayment.toLocaleString()}`, sub: '', highlight: true },
+          { label: 'שירותים', value: customer.services.length, sub: `₪${totalServicesCost.toLocaleString()}/חודש` },
+          { label: 'נכסים', value: customer.assets.length },
+          { label: 'אנשי קשר', value: customer.contacts.length },
+          { label: 'מסמכים', value: customer.documents.length },
+          { label: 'קריאות פתוחות', value: openTickets, alert: openTickets > 0 },
+        ].map((item, i) => (
+          <Card key={i} className={`border-border ${item.alert ? 'bg-red-50 border-red-200' : ''}`}>
+            <CardContent className="p-4 text-center">
+              <p className="text-[11px] text-muted-foreground">{item.label}</p>
+              <p className={`text-xl font-bold mt-1 ${item.highlight ? 'text-primary' : item.alert ? 'text-red-600' : 'text-foreground'}`}>{item.value}</p>
+              {item.sub && <p className="text-[11px] text-muted-foreground">{item.sub}</p>}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Tabs */}
