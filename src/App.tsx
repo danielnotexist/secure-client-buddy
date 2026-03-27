@@ -7,6 +7,7 @@ import { CrmLayout } from "@/components/CrmLayout";
 import Index from "./pages/Index";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
+import Projects from "./pages/Projects";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
+            <Route path="/projects" element={<Projects />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,12 +1,15 @@
 import { useMemo } from "react";
 import { getCustomers } from "@/lib/crm-data";
+import { getProjects } from "@/lib/projects-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, HardDrive, DollarSign, Activity, AlertTriangle, Wrench, TicketCheck } from "lucide-react";
+import { Users, HardDrive, DollarSign, Activity, AlertTriangle, Wrench, TicketCheck, FolderKanban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Dashboard() {
   const customers = useMemo(() => getCustomers(), []);
+  const projects = useMemo(() => getProjects(), []);
   const navigate = useNavigate();
 
   const stats = useMemo(() => {
@@ -15,7 +18,6 @@ export default function Dashboard() {
     const totalRevenue = customers.reduce((sum, c) => sum + c.monthlyPayment, 0);
     const totalAssets = customers.reduce((sum, c) => sum + c.assets.length, 0);
     const totalServices = customers.reduce((sum, c) => sum + c.services.length, 0);
-    const totalDocuments = customers.reduce((sum, c) => sum + c.documents.length, 0);
     const expiringServices = customers.flatMap(c => c.services).filter(s => {
       const end = new Date(s.endDate);
       const now = new Date();
@@ -23,70 +25,83 @@ export default function Dashboard() {
       return diff < 30 && diff > 0;
     }).length;
     const openTickets = customers.reduce((sum, c) => sum + (c.tickets || []).filter(t => t.status === 'open' || t.status === 'in-progress').length, 0);
+    const activeProjects = projects.filter(p => p.status === 'active').length;
 
-    return { totalCustomers, activeCustomers, totalRevenue, totalAssets, totalServices, totalDocuments, expiringServices, openTickets };
-  }, [customers]);
+    return { totalCustomers, activeCustomers, totalRevenue, totalAssets, totalServices, expiringServices, openTickets, activeProjects };
+  }, [customers, projects]);
 
   const cards = [
-    { title: 'סה"כ לקוחות', value: stats.totalCustomers, icon: Users, accent: "text-primary" },
-    { title: "לקוחות פעילים", value: stats.activeCustomers, icon: Activity, accent: "text-success" },
-    { title: "הכנסה חודשית", value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, accent: "text-primary" },
-    { title: "נכסים מנוהלים", value: stats.totalAssets, icon: HardDrive, accent: "text-primary" },
-    { title: "שירותים פעילים", value: stats.totalServices, icon: Wrench, accent: "text-primary" },
-    { title: "קריאות פתוחות", value: stats.openTickets, icon: TicketCheck, accent: stats.openTickets > 0 ? "text-destructive" : "text-primary" },
-    { title: "שירותים שפגים בקרוב", value: stats.expiringServices, icon: AlertTriangle, accent: "text-warning" },
+    { title: 'סה"כ לקוחות', value: stats.totalCustomers, icon: Users, color: "bg-primary/10 text-primary" },
+    { title: "לקוחות פעילים", value: stats.activeCustomers, icon: Activity, color: "bg-emerald-50 text-emerald-600" },
+    { title: "הכנסה חודשית", value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: "bg-primary/10 text-primary" },
+    { title: "נכסים מנוהלים", value: stats.totalAssets, icon: HardDrive, color: "bg-violet-50 text-violet-600" },
+    { title: "שירותים פעילים", value: stats.totalServices, icon: Wrench, color: "bg-sky-50 text-sky-600" },
+    { title: "פרויקטים פעילים", value: stats.activeProjects, icon: FolderKanban, color: "bg-indigo-50 text-indigo-600" },
+    { title: "קריאות פתוחות", value: stats.openTickets, icon: TicketCheck, color: stats.openTickets > 0 ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground" },
+    { title: "שירותים שפגים בקרוב", value: stats.expiringServices, icon: AlertTriangle, color: stats.expiringServices > 0 ? "bg-amber-50 text-amber-600" : "bg-muted text-muted-foreground" },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-foreground">לוח בקרה</h1>
         <p className="text-muted-foreground text-sm mt-1">סקירה כללית של מערכת ניהול הלקוחות</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card) => (
-          <Card key={card.title} className="bg-card border-border hover:border-glow transition-all duration-300 cursor-pointer glow-cyber">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-              <card.icon className={`h-5 w-5 ${card.accent}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{card.value}</div>
+          <Card key={card.title} className="border-border hover:shadow-md transition-shadow">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${card.color}`}>
+                <card.icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">{card.title}</p>
+                <p className="text-2xl font-bold text-foreground leading-tight">{card.value}</p>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-lg">לקוחות אחרונים</CardTitle>
+      {/* Recent Customers */}
+      <Card className="border-border">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-bold">לקוחות אחרונים</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">
             {customers.slice(0, 5).map((customer) => {
               const primary = customer.contacts.find(c => c.isPrimary) || customer.contacts[0];
+              const openTickets = (customer.tickets || []).filter(t => t.status === 'open' || t.status === 'in-progress').length;
               return (
                 <div
                   key={customer.id}
                   onClick={() => navigate(`/customers/${customer.id}`)}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+                  className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 cursor-pointer transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Users className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
+                  <div className="flex items-center gap-4 min-w-0">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      {customer.avatarUrl ? <AvatarImage src={customer.avatarUrl} alt={customer.name} /> : null}
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">{customer.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground">{customer.name}</p>
+                        <p className="font-semibold text-foreground truncate">{customer.name}</p>
                         <StatusBadge status={customer.status} />
                       </div>
-                      <p className="text-xs text-muted-foreground">{primary?.name || 'ללא איש קשר'}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{primary?.name || 'ללא איש קשר'}</p>
                     </div>
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-primary">₪{customer.monthlyPayment.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{customer.services.length} שירותים • {customer.assets.length} נכסים</p>
+                  <div className="flex items-center gap-6 shrink-0">
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-primary">₪{customer.monthlyPayment.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{customer.services.length} שירותים • {customer.assets.length} נכסים</p>
+                    </div>
+                    {openTickets > 0 && (
+                      <span className="bg-red-50 text-red-600 text-xs font-medium px-2 py-1 rounded-full">{openTickets} קריאות</span>
+                    )}
                   </div>
                 </div>
               );

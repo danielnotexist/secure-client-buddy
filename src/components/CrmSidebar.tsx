@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Shield, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Users, Shield, FolderKanban } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -15,12 +15,12 @@ import {
 const items = [
   { title: "לוח בקרה", url: "/", icon: LayoutDashboard },
   { title: "לקוחות", url: "/customers", icon: Users },
+  { title: "פרויקטים", url: "/projects", icon: FolderKanban },
 ];
 
 export function CrmSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
 
   return (
     <Sidebar collapsible="icon" side="right">
