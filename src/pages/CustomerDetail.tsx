@@ -240,10 +240,10 @@ export default function CustomerDetail() {
   const openTickets = (customer.tickets || []).filter(t => t.status === 'open' || t.status === 'in-progress').length;
 
   const priorityColor: Record<string, string> = {
-    low: 'bg-muted text-muted-foreground',
-    medium: 'bg-blue-100 text-blue-700',
-    high: 'bg-orange-100 text-orange-700',
-    critical: 'bg-red-100 text-red-700',
+    low: 'bg-muted/50 text-muted-foreground',
+    medium: 'bg-blue-500/15 text-blue-400',
+    high: 'bg-orange-500/15 text-orange-400',
+    critical: 'bg-red-500/15 text-red-400',
   };
   const priorityLabel: Record<string, string> = {
     low: 'נמוך', medium: 'בינוני', high: 'גבוה', critical: 'קריטי',
