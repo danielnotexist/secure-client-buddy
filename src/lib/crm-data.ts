@@ -59,6 +59,7 @@ export interface Ticket {
   updatedAt: string;
   imageUrl: string;
   notes: string;
+  resolution: string;
 }
 
 export interface Customer {
