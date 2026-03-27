@@ -185,6 +185,36 @@ export default function CustomerDetail() {
     toast.success("סטטוס קריאה עודכן");
   };
 
+  const handleEditTicket = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editTicketData) return;
+    const fd = new FormData(e.currentTarget);
+    updateTicketInCustomer(customer.id, editTicketData.id, {
+      subject: fd.get("subject") as string,
+      description: fd.get("description") as string,
+      priority: fd.get("priority") as Ticket["priority"],
+      assignee: fd.get("assignee") as string,
+      notes: fd.get("notes") as string,
+      updatedAt: new Date().toISOString().split('T')[0],
+    });
+    refresh();
+    setEditTicketData(null);
+    toast.success("קריאה עודכנה");
+  };
+
+  const handleCloseTicket = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!closeTicketData) return;
+    const fd = new FormData(e.currentTarget);
+    updateTicketInCustomer(customer.id, closeTicketData.id, {
+      status: fd.get("status") as Ticket["status"],
+      resolution: fd.get("resolution") as string,
+      updatedAt: new Date().toISOString().split('T')[0],
+    });
+    refresh();
+    setCloseTicketData(null);
+    toast.success("קריאה נסגרה");
+
   const handleSaveInfo = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
