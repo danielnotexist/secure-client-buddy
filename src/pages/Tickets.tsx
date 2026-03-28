@@ -165,8 +165,8 @@ export default function Tickets() {
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="חיפוש לפי נושא, לקוח, מטפל..." value={search} onChange={e => setSearch(e.target.value)} className="pr-10" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="חיפוש לפי נושא, לקוח, מטפל..." value={search} onChange={e => setSearch(e.target.value)} className="ps-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
@@ -186,7 +186,7 @@ export default function Tickets() {
           </div>
         )}
         {filtered.map(({ ticket, customerId, customerName }) => (
-          <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${(ticket.status === 'open' || ticket.status === 'in-progress') ? 'border-r-4 border-r-red-500/60' : ''}`}>
+          <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${(ticket.status === 'open' || ticket.status === 'in-progress') ? 'border-s-4 border-s-red-500/60' : ''}`}>
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">

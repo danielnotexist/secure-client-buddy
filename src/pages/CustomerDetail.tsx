@@ -303,7 +303,7 @@ export default function CustomerDetail() {
           { label: 'מסמכים', value: customer.documents.length },
           { label: 'קריאות פתוחות', value: openTickets, alert: openTickets > 0 },
         ].map((item, i) => (
-          <Card key={i} className={`border-border ${item.alert ? 'bg-red-50 border-red-200' : ''}`}>
+          <Card key={i} className={`border-border ${item.alert ? 'bg-destructive/5 border-destructive/20' : ''}`}>
             <CardContent className="p-4 text-center">
               <p className="text-[11px] text-muted-foreground">{item.label}</p>
               <p className={`text-xl font-bold mt-1 ${item.highlight ? 'text-primary' : item.alert ? 'text-red-600' : 'text-foreground'}`}>{item.value}</p>
@@ -569,7 +569,7 @@ export default function CustomerDetail() {
           ) : (
             <div className="grid gap-3">
               {(customer.tickets || []).map(ticket => (
-                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${(ticket.status === 'open' || ticket.status === 'in-progress') ? 'border-r-4 border-r-red-500/60' : ''}`}>
+                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${(ticket.status === 'open' || ticket.status === 'in-progress') ? 'border-s-4 border-s-red-500/60' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex gap-3 flex-1 min-w-0">
