@@ -569,7 +569,7 @@ export default function CustomerDetail() {
           ) : (
             <div className="grid gap-3">
               {(customer.tickets || []).map(ticket => (
-                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${(ticket.status === 'open' || ticket.status === 'in-progress') ? 'border-r-4 border-r-red-500/60' : ''}`}>
+                <Card key={ticket.id} className={`border-border hover:border-glow transition-all ${(ticket.status === 'open' || ticket.status === 'in-progress') ? 'border-s-4 border-s-red-500/60' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex gap-3 flex-1 min-w-0">
