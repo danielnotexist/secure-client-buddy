@@ -1,10 +1,10 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { getCustomers, addCustomer, deleteCustomer, updateCustomer, type Customer } from "@/lib/crm-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Search, Trash2, Eye, MapPin, TicketCheck, ImagePlus } from "lucide-react";
+import { Plus, Search, Trash2, Eye, MapPin, TicketCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -121,8 +121,8 @@ export default function Customers() {
       </div>
 
       <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="חיפוש לפי שם, תחום, עיר, איש קשר..." value={search} onChange={(e) => setSearch(e.target.value)} className="pr-10" />
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="חיפוש לפי שם, תחום, עיר, איש קשר..." value={search} onChange={(e) => setSearch(e.target.value)} className="ps-10" />
       </div>
 
       <div className="grid gap-3">

@@ -95,12 +95,12 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-6 shrink-0">
-                    <div className="text-left">
+                    <div className="text-start">
                       <p className="text-sm font-bold text-primary">₪{customer.monthlyPayment.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">{customer.services.length} שירותים • {customer.assets.length} נכסים</p>
                     </div>
                     {openTickets > 0 && (
-                      <span className="bg-red-50 text-red-600 text-xs font-medium px-2 py-1 rounded-full">{openTickets} קריאות</span>
+                      <span className="bg-destructive/10 text-destructive text-xs font-medium px-2 py-1 rounded-full">{openTickets} קריאות</span>
                     )}
                   </div>
                 </div>
